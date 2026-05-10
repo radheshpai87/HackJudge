@@ -1,0 +1,199 @@
+version: "1"
+
+event:
+  name: "HackFest 2025"
+  slug: "hackfest-2025"
+  description: "A 24-hour hackathon focused on AI, sustainability, and open data."
+  timezone: "Asia/Kolkata"
+  judging_opens_at: "2026-06-01T09:00:00+05:30"
+  judging_closes_at: "2026-06-30T18:00:00+05:30"
+  logo_url: "https://example.com/hackfest-logo.png"
+
+tracks:
+  - id: ai
+    name: "AI & Machine Learning"
+    description: "Projects using ML/DL, NLP, computer vision, or generative AI."
+  - id: sustainability
+    name: "Sustainability"
+    description: "Tech solutions targeting climate, energy, or waste reduction."
+  - id: open_data
+    name: "Open Data"
+    description: "Applications built on publicly available datasets."
+
+criteria:
+  # AI track — weights sum to 1.0
+  - id: ai_presentation
+    name: "Presentation & Demo"
+    description: "Clarity of the pitch, live demo quality, and storytelling."
+    max_score: 10
+    weight: 0.20
+    track_id: ai
+    scoring_type: numeric
+
+  - id: ai_innovation
+    name: "Innovation"
+    description: "Novelty of the AI approach and uniqueness of the solution."
+    max_score: 10
+    weight: 0.35
+    track_id: ai
+    scoring_type: numeric
+
+  - id: ai_technical
+    name: "Technical Depth"
+    description: "Quality of model design, training pipeline, and evaluation."
+    max_score: 10
+    weight: 0.30
+    track_id: ai
+    scoring_type: numeric
+
+  - id: ai_impact
+    name: "Real-World Impact"
+    description: "Potential for deployment and societal benefit."
+    max_score: 10
+    weight: 0.15
+    track_id: ai
+    scoring_type: numeric
+
+  # Sustainability track — weights sum to 1.0
+  - id: sus_presentation
+    name: "Presentation & Demo"
+    description: "Clarity of the pitch, live demo quality, and storytelling."
+    max_score: 10
+    weight: 0.20
+    track_id: sustainability
+    scoring_type: numeric
+
+  - id: sus_feasibility
+    name: "Feasibility"
+    description: "How realistic is large-scale deployment?"
+    max_score: 10
+    weight: 0.40
+    track_id: sustainability
+    scoring_type: rubric
+    rubric:
+      - score: 10
+        label: "Production-ready"
+        description: "Clear deployment path, costed, partnerships identified."
+      - score: 7
+        label: "Prototype-ready"
+        description: "Working prototype with credible scale-up plan."
+      - score: 4
+        label: "Concept stage"
+        description: "Idea well-articulated but no working implementation."
+      - score: 1
+        label: "Speculative"
+        description: "No evidence of technical or market feasibility."
+
+  - id: sus_impact
+    name: "Environmental Impact"
+    description: "Quantified reduction in carbon, waste, or energy use."
+    max_score: 10
+    weight: 0.40
+    track_id: sustainability
+    scoring_type: numeric
+
+  # Open Data track — weights sum to 1.0
+  - id: od_presentation
+    name: "Presentation & Demo"
+    description: "Clarity of the pitch, live demo quality, and storytelling."
+    max_score: 10
+    weight: 0.20
+    track_id: open_data
+    scoring_type: numeric
+
+  - id: od_data_quality
+    name: "Data Utilisation"
+    description: "How creatively and rigorously are open datasets used?"
+    max_score: 10
+    weight: 0.40
+    track_id: open_data
+    scoring_type: numeric
+
+  - id: od_reproducibility
+    name: "Reproducibility"
+    description: "Can the project be run from the public repo without modification?"
+    max_score: 10
+    weight: 0.40
+    track_id: open_data
+    scoring_type: numeric
+
+teams:
+  - id: team_alpha
+    name: "Team Alpha"
+    track_id: ai
+    table_number: "A1"
+    members: ["Alice Chen", "Bob Kumar", "Carol Lee"]
+
+  - id: team_beta
+    name: "Team Beta"
+    track_id: ai
+    table_number: "A2"
+    members: ["David Singh", "Eva Patel"]
+
+  - id: team_gamma
+    name: "Team Gamma"
+    track_id: sustainability
+    table_number: "B1"
+    members: ["Frank Osei", "Grace Liu", "Heidi Müller"]
+
+  - id: team_delta
+    name: "Team Delta"
+    track_id: sustainability
+    table_number: "B2"
+    members: ["Ivan Petrov", "Julia Santos"]
+
+  - id: team_epsilon
+    name: "Team Epsilon"
+    track_id: open_data
+    table_number: "C1"
+    members: ["Kevin Nakamura", "Lena Vogel", "Marco Rossi"]
+
+  - id: team_zeta
+    name: "Team Zeta"
+    track_id: open_data
+    table_number: "C2"
+    members: ["Nina Park", "Omar Al-Farsi"]
+
+judges:
+  - id: judge_priya
+    name: "Priya Sharma"
+    email: "priya@example.com"
+    tracks: [ai, sustainability]
+
+  - id: judge_alex
+    name: "Alex Tan"
+    email: "alex@example.com"
+    tracks: [ai, open_data]
+
+  - id: judge_rania
+    name: "Rania Khalid"
+    email: "rania@example.com"
+    tracks: [sustainability, open_data]
+
+assignment:
+  mode: assigned
+  min_judges_per_team: 2
+  allow_self_scoring: false
+  assigned_teams:
+    - judge_id: judge_priya
+      team_ids: [team_alpha, team_beta, team_gamma, team_delta]
+    - judge_id: judge_alex
+      team_ids: [team_alpha, team_beta, team_epsilon, team_zeta]
+    - judge_id: judge_rania
+      team_ids: [team_gamma, team_delta, team_epsilon, team_zeta]
+
+moderation:
+  enabled: true
+  outlier_threshold: 1.5
+  allow_organizer_override: true
+  require_panel_discussion: false
+  lock_results_after: "2026-07-01T00:00:00+05:30"
+
+results:
+  tiebreaker: higher_avg
+  show_scores_to_judges: true
+  export:
+    pdf_certificates: true
+    csv: true
+    webhook_url: null
+    webhook_secret: null

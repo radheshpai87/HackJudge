@@ -1,0 +1,80 @@
+version: "1"
+
+event:
+  name: "Demo Hackathon"
+  slug: "demo-hackathon"
+  description: "A demo event for HackJudge"
+  timezone: "Asia/Kolkata"
+  judging_opens_at: "2025-06-01T09:00:00+05:30"
+  judging_closes_at: "2025-06-01T18:00:00+05:30"
+  logo_url: "https://example.com/logo.png"
+
+tracks:
+  - id: "web"
+    name: "Web Development"
+    description: "Browser-based applications"
+  - id: "mobile"
+    name: "Mobile Apps"
+    description: "iOS and Android applications"
+
+criteria:
+  - id: "innovation"
+    name: "Innovation"
+    description: "How novel is the idea?"
+    max_score: 10
+    weight: 0.4
+    track_id: null
+    scoring_type: "numeric"
+  - id: "execution"
+    name: "Execution"
+    description: "How well was it built?"
+    max_score: 10
+    weight: 0.4
+    track_id: null
+    scoring_type: "numeric"
+  - id: "presentation"
+    name: "Presentation"
+    description: "How clear was the demo?"
+    max_score: 10
+    weight: 0.2
+    track_id: null
+    scoring_type: "numeric"
+
+teams:
+  - id: "team-alpha"
+    name: "Team Alpha"
+    track_id: "web"
+    members: ["Alice", "Bob"]
+    table_number: "A1"
+  - id: "team-beta"
+    name: "Team Beta"
+    track_id: "mobile"
+    members: ["Charlie", "Diana"]
+    table_number: "B2"
+
+judges:
+  - id: "judge-1"
+    name: "Judge One"
+    email: "judge1@example.com"
+    tracks: "all"
+
+assignment:
+  mode: "free"
+  min_judges_per_team: 1
+  allow_self_scoring: false
+
+moderation:
+  enabled: true
+  outlier_threshold: 1.5
+  allow_organizer_override: true
+  require_panel_discussion: false
+  lock_results_after: null
+
+results:
+  tiebreaker: "higher_avg"
+  show_scores_to_judges: false
+  export:
+    pdf_certificates: true
+    csv: true
+    webhook_url: null
+    webhook_secret: null
