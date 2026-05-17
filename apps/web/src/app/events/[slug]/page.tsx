@@ -13,15 +13,19 @@ export default function EventDashboard() {
   const [event, setEvent] = useState<any>(null);
   const [status, setStatus] = useState<any>(null);
   const [judges, setJudges] = useState<any[]>([]);
+  const [notOrg, setNotOrg] = useState(false);
   const [copiedPortal, setCopiedPortal] = useState(false);
   const reduced = useReducedMotion();
 
   function reloadJudges() {
     const orgToken = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-    if (orgToken) {
-      fetch(`${API}/events/${slug}/judges`, { headers: { Authorization: `Bearer ${orgToken}` } })
-        .then((r) => r.json()).then((d) => d.success && setJudges(d.data));
-    }
+    if (!orgToken) { setNotOrg(true); return; }
+    fetch(`${API}/events/${slug}/judges`, { headers: { Authorization: `Bearer ${orgToken}` } })
+      .then((r) => {
+        if (r.status === 401) { setNotOrg(true); return r.json(); }
+        return r.json();
+      })
+      .then((d) => { if (d?.success) { setJudges(d.data); setNotOrg(false); } });
   }
 
   useEffect(() => {
@@ -116,8 +120,8 @@ export default function EventDashboard() {
             </h3>
             {event?.tracks && event.tracks.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-2">
-                {event.tracks.map((track: any) => (
-                  <span key={track.id} className="inline-flex items-center rounded-full border border-bg-border bg-bg-muted px-3 py-1 text-xs text-fg-muted">
+                {event.tracks.map((track: any, i: number) => (
+                  <span key={track.id ?? track.name ?? i} className="inline-flex items-center rounded-full border border-bg-border bg-bg-muted px-3 py-1 text-xs text-fg-muted">
                     {track.name}
                   </span>
                 ))}
@@ -134,8 +138,8 @@ export default function EventDashboard() {
             </h3>
             {event?.criteria && event.criteria.length > 0 ? (
               <div className="mt-3 space-y-1.5">
-                {event.criteria.map((c: any) => (
-                  <div key={c.id} className="flex items-center justify-between text-xs">
+                {event.criteria.map((c: any, i: number) => (
+                  <div key={c.id ?? c.name ?? i} className="flex items-center justify-between text-xs">
                     <span className="text-fg-muted">{c.name}</span>
                     <span className="text-fg-subtle">{c.scoring_type === 'rubric' ? 'Rubric' : `0–${c.max_score}`} · {(c.weight * 100).toFixed(0)}%</span>
                   </div>
@@ -156,7 +160,7 @@ export default function EventDashboard() {
 
         {/* Judge Access */}
         <JudgeAccessPanel
-          slug={String(slug)} judges={judges} copiedPortal={copiedPortal}
+          slug={String(slug)} judges={judges} notOrg={notOrg} copiedPortal={copiedPortal}
           onPinUpdated={reloadJudges}
           onCopyPortal={() => { navigator.clipboard.writeText(`${window.location.origin}/events/${slug}/judge`); setCopiedPortal(true); setTimeout(() => setCopiedPortal(false), 2000); }}
         />
@@ -184,8 +188,8 @@ function StatCard({ icon, value, label }: { icon: React.ReactNode; value: string
   );
 }
 
-function JudgeAccessPanel({ slug, judges, copiedPortal, onPinUpdated, onCopyPortal }: {
-  slug: string; judges: any[]; copiedPortal: boolean; onPinUpdated: () => void; onCopyPortal: () => void;
+function JudgeAccessPanel({ slug, judges, notOrg, copiedPortal, onPinUpdated, onCopyPortal }: {
+  slug: string; judges: any[]; notOrg: boolean; copiedPortal: boolean; onPinUpdated: () => void; onCopyPortal: () => void;
 }) {
   const portalUrl = typeof window !== 'undefined' ? `${window.location.origin}/events/${slug}/judge` : `http://localhost:3000/events/${slug}/judge`;
   return (
@@ -206,14 +210,20 @@ function JudgeAccessPanel({ slug, judges, copiedPortal, onPinUpdated, onCopyPort
         </button>
       </div>
 
-      {judges.length > 0 ? (
+      {notOrg ? (
+        <div className="flex flex-col items-center gap-3 py-10 text-center">
+          <KeyRound size={24} className="text-fg-subtle" />
+          <p className="text-sm text-fg-muted">Sign in as organizer to manage judge PINs.</p>
+          <a href={`/login?next=/events/${slug}`} className="btn-primary text-sm">Sign in</a>
+        </div>
+      ) : judges.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {judges.map((judge) => (
             <JudgeCard key={judge.id} judge={judge} slug={slug} portalUrl={portalUrl} onPinUpdated={onPinUpdated} />
           ))}
         </div>
       ) : (
-        <p className="py-10 text-center text-sm text-fg-subtle">No judges found. Make sure you are signed in as organizer.</p>
+        <p className="py-10 text-center text-sm text-fg-subtle">No judges configured for this event.</p>
       )}
     </div>
   );
