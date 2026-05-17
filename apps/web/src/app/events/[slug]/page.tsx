@@ -8,6 +8,22 @@ import Link from 'next/link';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
+function getAppBase() {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  if (typeof window === 'undefined') return 'http://localhost:3000';
+  const origin = window.location.origin;
+  // If the organizer opened via localhost but API is on a LAN IP, use that IP for shareable URLs
+  if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    try {
+      const apiHost = new URL(API).hostname;
+      if (apiHost !== 'localhost' && apiHost !== '127.0.0.1') {
+        return `http://${apiHost}:3000`;
+      }
+    } catch { /* fall through */ }
+  }
+  return origin;
+}
+
 export default function EventDashboard() {
   const { slug } = useParams();
   const [event, setEvent] = useState<any>(null);
@@ -191,8 +207,7 @@ function StatCard({ icon, value, label }: { icon: React.ReactNode; value: string
 function JudgeAccessPanel({ slug, judges, notOrg, copiedPortal, onPinUpdated, onCopyPortal }: {
   slug: string; judges: any[]; notOrg: boolean; copiedPortal: boolean; onPinUpdated: () => void; onCopyPortal: () => void;
 }) {
-  const appBase = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
-  const portalUrl = `${appBase}/events/${slug}/judge`;
+  const portalUrl = `${getAppBase()}/events/${slug}/judge`;
   return (
     <div className="card p-6">
       <div className="mb-5 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
