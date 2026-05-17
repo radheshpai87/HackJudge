@@ -11,11 +11,13 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 
 export function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
+  // Also accept ?token= query param (used by export download links)
+  const queryToken = typeof req.query.token === 'string' ? req.query.token : null;
+  if (!header?.startsWith("Bearer ") && !queryToken) {
     res.status(401).json(error("UNAUTHORIZED", "Missing or invalid authorization header"));
     return;
   }
-  const token = header.slice(7);
+  const token = queryToken ?? header!.slice(7);
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     req.user = { ...decoded, id: decoded.id ?? decoded.judgeId };
