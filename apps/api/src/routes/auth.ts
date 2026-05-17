@@ -105,6 +105,39 @@ router.post("/refresh", async (req, res) => {
   }
 });
 
+router.post("/judge-login", authLimiter, async (req, res) => {
+  const schema = z.object({ email: z.string().email(), pin: z.string().min(1), eventSlug: z.string() });
+  const parse = schema.safeParse(req.body);
+  if (!parse.success) {
+    res.status(400).json(error("VALIDATION_ERROR", "Invalid request"));
+    return;
+  }
+  const event = await prisma.event.findUnique({ where: { slug: parse.data.eventSlug } });
+  if (!event) {
+    res.status(404).json(error("EVENT_NOT_FOUND", "Event not found"));
+    return;
+  }
+  const judge = await prisma.judge.findFirst({ where: { email: parse.data.email, eventId: event.id } });
+  if (!judge) {
+    res.status(401).json(error("UNAUTHORIZED", "Email not registered for this event"));
+    return;
+  }
+  if (!judge.passwordHash) {
+    res.status(401).json(error("NO_PIN", "No PIN set for this account. Ask your organizer to set one."));
+    return;
+  }
+  const valid = await bcrypt.compare(parse.data.pin, judge.passwordHash);
+  if (!valid) {
+    res.status(401).json(error("UNAUTHORIZED", "Incorrect PIN"));
+    return;
+  }
+  await prisma.judge.update({ where: { id: judge.id }, data: { lastLoginAt: new Date() } });
+  const accessToken = signAccessToken({ judgeId: judge.id, eventId: event.id, role: "judge" });
+  const refreshToken = signRefreshToken({ judgeId: judge.id, eventId: event.id, role: "judge" });
+  await auditLog(event.id, judge.id, "judge", "judge_pin_login", { email: judge.email });
+  res.json(success({ accessToken, refreshToken, eventSlug: event.slug }));
+});
+
 router.post("/organizer/login", authLimiter, async (req, res) => {
   const schema = z.object({ email: z.string().email(), password: z.string() });
   const parse = schema.safeParse(req.body);

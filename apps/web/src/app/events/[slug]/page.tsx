@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Activity, BarChart3, Users, CheckCircle, FileBarChart, QrCode, Send, Copy, ExternalLink, CalendarRange, LayoutList, Tag } from 'lucide-react';
+import { Activity, BarChart3, Users, CheckCircle, FileBarChart, QrCode, Copy, ExternalLink, CalendarRange, LayoutList, Tag, KeyRound, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
@@ -13,30 +13,22 @@ export default function EventDashboard() {
   const [event, setEvent] = useState<any>(null);
   const [status, setStatus] = useState<any>(null);
   const [judges, setJudges] = useState<any[]>([]);
-  const [sending, setSending] = useState<Record<string, boolean>>({});
-  const [sent, setSent] = useState<Record<string, boolean>>({});
   const [copiedPortal, setCopiedPortal] = useState(false);
   const reduced = useReducedMotion();
 
-  useEffect(() => {
-    fetch(`${API}/events/${slug}`).then((r) => r.json()).then((d) => setEvent(d.data));
-    fetch(`${API}/events/${slug}/status`).then((r) => r.json()).then((d) => setStatus(d.data));
+  function reloadJudges() {
     const orgToken = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
     if (orgToken) {
       fetch(`${API}/events/${slug}/judges`, { headers: { Authorization: `Bearer ${orgToken}` } })
         .then((r) => r.json()).then((d) => d.success && setJudges(d.data));
     }
-  }, [slug]);
-
-  async function sendMagicLink(email: string) {
-    setSending((s) => ({ ...s, [email]: true }));
-    try {
-      await fetch(`${API}/auth/magic-link`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, eventSlug: slug }) });
-      setSent((s) => ({ ...s, [email]: true }));
-    } finally { setSending((s) => ({ ...s, [email]: false })); }
   }
 
-  async function sendAllMagicLinks() { for (const j of judges) await sendMagicLink(j.email); }
+  useEffect(() => {
+    fetch(`${API}/events/${slug}`).then((r) => r.json()).then((d) => setEvent(d.data));
+    fetch(`${API}/events/${slug}/status`).then((r) => r.json()).then((d) => setStatus(d.data));
+    reloadJudges();
+  }, [slug]);
 
   if (!event) {
     return (
@@ -164,8 +156,8 @@ export default function EventDashboard() {
 
         {/* Judge Access */}
         <JudgeAccessPanel
-          slug={String(slug)} judges={judges} sending={sending} sent={sent} copiedPortal={copiedPortal}
-          onSend={sendMagicLink} onSendAll={sendAllMagicLinks}
+          slug={String(slug)} judges={judges} copiedPortal={copiedPortal}
+          onPinUpdated={reloadJudges}
           onCopyPortal={() => { navigator.clipboard.writeText(`${window.location.origin}/events/${slug}/judge`); setCopiedPortal(true); setTimeout(() => setCopiedPortal(false), 2000); }}
         />
       </main>
@@ -192,9 +184,8 @@ function StatCard({ icon, value, label }: { icon: React.ReactNode; value: string
   );
 }
 
-function JudgeAccessPanel({ slug, judges, sending, sent, copiedPortal, onSend, onSendAll, onCopyPortal }: {
-  slug: string; judges: any[]; sending: Record<string, boolean>; sent: Record<string, boolean>;
-  copiedPortal: boolean; onSend: (email: string) => void; onSendAll: () => void; onCopyPortal: () => void;
+function JudgeAccessPanel({ slug, judges, copiedPortal, onPinUpdated, onCopyPortal }: {
+  slug: string; judges: any[]; copiedPortal: boolean; onPinUpdated: () => void; onCopyPortal: () => void;
 }) {
   const portalUrl = typeof window !== 'undefined' ? `${window.location.origin}/events/${slug}/judge` : `http://localhost:3000/events/${slug}/judge`;
   return (
@@ -202,12 +193,9 @@ function JudgeAccessPanel({ slug, judges, sending, sent, copiedPortal, onSend, o
       <div className="mb-5 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h3 className="section-title">Judge Portal</h3>
-          <p className="section-subtitle mt-1">Share QR codes or send magic links to let judges start scoring.</p>
+          <p className="section-subtitle mt-1">Set a PIN for each judge. They use their email + PIN to sign in.</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={onSendAll} className="btn-secondary text-sm"><Send size={14} /> Send All</button>
-          <Link href={portalUrl} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm"><ExternalLink size={14} /> Open Portal</Link>
-        </div>
+        <Link href={portalUrl} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm"><ExternalLink size={14} /> Open Portal</Link>
       </div>
 
       <div className="mb-6 flex items-center gap-3 rounded-lg border border-bg-border bg-bg-muted p-4">
@@ -219,30 +207,80 @@ function JudgeAccessPanel({ slug, judges, sending, sent, copiedPortal, onSend, o
       </div>
 
       {judges.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {judges.map((judge) => {
-            const judgeUrl = `${portalUrl}?email=${encodeURIComponent(judge.email)}`;
-            const qr = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&color=ededed&bgcolor=111111&data=${encodeURIComponent(judgeUrl)}`;
-            return (
-              <div key={judge.email} className="flex flex-col items-center gap-3 rounded-xl border border-bg-border bg-bg-muted p-5">
-                <div className="overflow-hidden rounded-lg border border-bg-border">
-                  <img src={qr} alt={`QR for ${judge.name}`} width={150} height={150} className="block" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-fg-default">{judge.name}</p>
-                  <p className="mt-0.5 text-2xs text-fg-subtle">{judge.tracks?.join(' · ')}</p>
-                  <p className="mt-0.5 font-mono text-2xs text-fg-subtle">{judge.completion}% done</p>
-                </div>
-                <button onClick={() => onSend(judge.email)} disabled={sending[judge.email] || sent[judge.email]} className="btn-secondary w-full justify-center text-xs">
-                  {sent[judge.email] ? <><CheckCircle size={13} /> Sent</> : <><Send size={13} /> Send Magic Link</>}
-                </button>
-              </div>
-            );
-          })}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {judges.map((judge) => (
+            <JudgeCard key={judge.id} judge={judge} slug={slug} portalUrl={portalUrl} onPinUpdated={onPinUpdated} />
+          ))}
         </div>
       ) : (
         <p className="py-10 text-center text-sm text-fg-subtle">No judges found. Make sure you are signed in as organizer.</p>
       )}
+    </div>
+  );
+}
+
+function JudgeCard({ judge, slug, portalUrl, onPinUpdated }: { judge: any; slug: string; portalUrl: string; onPinUpdated: () => void }) {
+  const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState('');
+  const judgeUrl = `${portalUrl}?email=${encodeURIComponent(judge.email)}`;
+  const qr = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&color=ededed&bgcolor=111111&data=${encodeURIComponent(judgeUrl)}`;
+
+  async function savePin() {
+    if (pin.length < 4) { setErr('Min 4 characters'); return; }
+    setSaving(true); setErr('');
+    const orgToken = localStorage.getItem('token') || '';
+    const res = await fetch(`${API}/events/${slug}/judges/${judge.id}/pin`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${orgToken}` },
+      body: JSON.stringify({ pin }),
+    });
+    const data = await res.json();
+    setSaving(false);
+    if (data.success) { setSaved(true); setPin(''); onPinUpdated(); setTimeout(() => setSaved(false), 2000); }
+    else setErr(data.error?.message ?? 'Failed to save');
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-bg-border bg-bg-muted p-4">
+      <div className="flex items-start gap-3">
+        <div className="overflow-hidden rounded-lg border border-bg-border flex-shrink-0">
+          <img src={qr} alt={`QR for ${judge.name}`} width={80} height={80} className="block" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-fg-default truncate">{judge.name}</p>
+          <p className="text-xs text-fg-subtle truncate">{judge.email}</p>
+          <p className="mt-1 text-xs text-fg-subtle">{judge.tracks?.join(' · ') || 'All tracks'}</p>
+          <div className="mt-1 flex items-center gap-1.5">
+            {judge.hasPin
+              ? <><ShieldCheck size={12} className="text-semantic-success" /><span className="text-2xs text-semantic-success">PIN set</span></>
+              : <><KeyRound size={12} className="text-amber-400" /><span className="text-2xs text-amber-400">No PIN</span></>}
+            <span className="text-2xs text-fg-subtle ml-auto">{judge.completion}% done</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <input
+            className="input w-full pr-10 font-mono text-sm tracking-widest"
+            type={showPin ? 'text' : 'password'}
+            placeholder={judge.hasPin ? 'Change PIN…' : 'Set PIN…'}
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && savePin()}
+          />
+          <button onClick={() => setShowPin(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-subtle">
+            {showPin ? <EyeOff size={13} /> : <Eye size={13} />}
+          </button>
+        </div>
+        <button onClick={savePin} disabled={saving || !pin} className="btn-secondary text-xs px-3">
+          {saved ? <CheckCircle size={13} className="text-semantic-success" /> : saving ? '…' : 'Save'}
+        </button>
+      </div>
+      {err && <p className="text-xs text-semantic-error">{err}</p>}
     </div>
   );
 }

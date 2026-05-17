@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Hexagon, ArrowLeft, ArrowRight, Check, Trophy, LogOut } from 'lucide-react';
+import { Hexagon, ArrowLeft, ArrowRight, Check, Trophy, LogOut, KeyRound } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
@@ -72,31 +72,22 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 /* ═══════════════════════════════════════════════════════ AUTH ═══════ */
 function AuthScreen({ slug, eventConfig, prefilledEmail, onSignedIn }: { slug: string; eventConfig: EventConfig | null; prefilledEmail: string; onSignedIn: (token: string, state: JudgeState) => void }) {
-  const [step, setStep] = useState<'request' | 'verify'>(prefilledEmail ? 'request' : 'request');
   const [email, setEmail] = useState(prefilledEmail);
-  const [magicToken, setMagicToken] = useState('');
+  const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [hint, setHint] = useState('');
   const [err, setErr] = useState('');
 
-  async function requestLink() {
+  async function login() {
     if (!email.trim()) { setErr('Enter your email address.'); return; }
+    if (!pin.trim()) { setErr('Enter your PIN.'); return; }
     setLoading(true); setErr('');
-    const data = await apiFetch('/auth/magic-link', undefined, { method: 'POST', body: JSON.stringify({ email: email.trim(), eventSlug: slug }) });
-    setLoading(false);
-    if (data.success) { setHint('Magic link sent! Check your email — or look in the API terminal (dev mode).'); setStep('verify'); }
-    else { setErr(data.error?.message ?? 'Failed to send magic link.'); }
-  }
-
-  async function verify() {
-    if (!magicToken.trim()) { setErr('Paste the token from the magic link.'); return; }
-    setLoading(true); setErr('');
-    const data = await apiFetch(`/auth/verify/${magicToken.trim()}`);
-    if (!data.success) { setLoading(false); setErr(data.error?.message ?? 'Invalid or expired token.'); return; }
+    const data = await apiFetch('/auth/judge-login', undefined, { method: 'POST', body: JSON.stringify({ email: email.trim(), pin: pin.trim(), eventSlug: slug }) });
+    if (!data.success) { setLoading(false); setErr(data.error?.message ?? 'Sign in failed.'); return; }
     const meData = await apiFetch(`/events/${slug}/judges/me`, data.data.accessToken);
     setLoading(false);
     if (meData.success) { onSignedIn(data.data.accessToken, meData.data); }
-    else { setErr('Authenticated but could not load your profile. Are you assigned to this event?'); }
+    else { setErr('Signed in but could not load your profile. Contact the organizer.'); }
   }
 
   return (
@@ -114,31 +105,48 @@ function AuthScreen({ slug, eventConfig, prefilledEmail, onSignedIn }: { slug: s
       </div>
 
       <div className="card p-6">
-        {step === 'request' ? (
-          <>
-            <h2 className="mb-5 text-lg font-semibold text-fg-default">Judge Sign In</h2>
+        <h2 className="mb-5 text-lg font-semibold text-fg-default">Judge Sign In</h2>
+        <div className="space-y-4">
+          <div>
             <label className="label">Email address</label>
-            <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="judge@example.com" type="email" onKeyDown={(e) => e.key === 'Enter' && requestLink()} />
-            {err && <p className="mt-2 text-sm text-semantic-error">{err}</p>}
-            <button className="btn-primary mt-4 w-full" onClick={requestLink} disabled={loading}>
-              {loading ? 'Sending…' : 'Send Magic Link'}
-            </button>
-          </>
-        ) : (
-          <>
-            <h2 className="mb-2 text-lg font-semibold text-fg-default">Enter Token</h2>
-            {hint && <p className="mb-4 text-sm text-fg-muted leading-relaxed">{hint}</p>}
-            <label className="label">Magic link token</label>
-            <textarea className="input mb-4 h-20 resize-y font-mono text-sm" value={magicToken} onChange={(e) => setMagicToken(e.target.value)} placeholder="Paste token here…" />
-            {err && <p className="mb-2 text-sm text-semantic-error">{err}</p>}
-            <button className="btn-primary w-full" onClick={verify} disabled={loading}>
-              {loading ? 'Verifying…' : 'Sign In'}
-            </button>
-            <button onClick={() => { setStep('request'); setErr(''); }} className="btn-ghost mt-3 w-full text-fg-subtle">
-              <ArrowLeft size={14} /> Back
-            </button>
-          </>
-        )}
+            <input
+              className="input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="judge@example.com"
+              type="email"
+              autoComplete="email"
+              onKeyDown={(e) => e.key === 'Enter' && login()}
+            />
+          </div>
+          <div>
+            <label className="label">PIN</label>
+            <div className="relative">
+              <input
+                className="input w-full pr-12 tracking-widest"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                placeholder="••••"
+                type={showPin ? 'text' : 'password'}
+                inputMode="numeric"
+                autoComplete="current-password"
+                onKeyDown={(e) => e.key === 'Enter' && login()}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPin((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-fg-subtle hover:text-fg-muted"
+              >
+                {showPin ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-fg-subtle">PIN is set by the event organizer</p>
+          </div>
+        </div>
+        {err && <p className="mt-3 text-sm text-semantic-error">{err}</p>}
+        <button className="btn-primary mt-5 w-full" onClick={login} disabled={loading}>
+          {loading ? 'Signing in…' : 'Sign In →'}
+        </button>
       </div>
     </div>
   );
