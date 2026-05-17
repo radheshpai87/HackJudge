@@ -48,7 +48,7 @@ API_PID=$!
 
 # Start Web
 echo "🌐 Starting Web on 0.0.0.0:$WEB_PORT..."
-NEXT_PUBLIC_API_URL=http://$LAN_IP:$API_PORT/api/v1 pnpm --filter web dev:lan 2>/dev/null &
+NEXT_PUBLIC_API_URL=http://$LAN_IP:$API_PORT/api/v1 NEXT_PUBLIC_APP_URL=http://$LAN_IP:$WEB_PORT pnpm --filter web dev:lan 2>/dev/null &
 WEB_PID=$!
 
 sleep 3

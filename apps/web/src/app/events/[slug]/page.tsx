@@ -191,7 +191,8 @@ function StatCard({ icon, value, label }: { icon: React.ReactNode; value: string
 function JudgeAccessPanel({ slug, judges, notOrg, copiedPortal, onPinUpdated, onCopyPortal }: {
   slug: string; judges: any[]; notOrg: boolean; copiedPortal: boolean; onPinUpdated: () => void; onCopyPortal: () => void;
 }) {
-  const portalUrl = typeof window !== 'undefined' ? `${window.location.origin}/events/${slug}/judge` : `http://localhost:3000/events/${slug}/judge`;
+  const appBase = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+  const portalUrl = `${appBase}/events/${slug}/judge`;
   return (
     <div className="card p-6">
       <div className="mb-5 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
