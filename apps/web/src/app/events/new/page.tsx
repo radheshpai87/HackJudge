@@ -615,38 +615,68 @@ export default function NewEventPage() {
 /* ─── Bulk Import: Tracks ─── */
 function BulkImportTracks({ onImport }: { onImport: (tracks: Track[]) => void }) {
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<'paste' | 'file'>('paste');
   const [csv, setCsv] = useState('');
   const [preview, setPreview] = useState<Track[]>([]);
+  const [fileName, setFileName] = useState('');
 
-  function parseCsv(text: string) {
+  function parseText(text: string) {
+    // Skip header row if first cell looks like a header
     const lines = text.trim().split('\n').filter(Boolean);
-    const parsed: Track[] = lines.map(line => {
-      const [name = '', description = ''] = line.split(',').map(s => s.trim());
+    const start = /^(track.?name|name|id)/i.test(lines[0]?.split(',')[0] ?? '') ? 1 : 0;
+    const parsed: Track[] = lines.slice(start).map(line => {
+      const cols = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+      const [name = '', description = ''] = cols;
       const id = slugify(name).replace(/-/g, '_') || uid('track');
       return { id, name, description };
     }).filter(t => t.name);
     setPreview(parsed);
   }
 
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = ev => { const text = ev.target?.result as string; setCsv(text); parseText(text); };
+    reader.readAsText(file);
+  }
+
+  function reset() { setOpen(false); setCsv(''); setPreview([]); setFileName(''); }
+
   if (!open) return (
     <button type="button" onClick={() => setOpen(true)} className="btn-ghost w-full justify-center text-xs text-fg-subtle">
-      <Upload size={14} /> Bulk import via CSV paste
+      <Upload size={14} /> Bulk import tracks
     </button>
   );
 
   return (
     <div className="card p-4">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-medium text-fg-default">Bulk Import Tracks</p>
-        <button type="button" onClick={() => { setOpen(false); setCsv(''); setPreview([]); }} className="text-xs text-fg-muted">Cancel</button>
+        <button type="button" onClick={reset} className="text-xs text-fg-muted">Cancel</button>
       </div>
-      <p className="mb-3 text-xs text-fg-subtle">One track per line: <code className="font-mono">Track Name, Description (optional)</code></p>
-      <textarea
-        className="input mb-3 h-24 w-full resize-none font-mono text-xs"
-        placeholder={"AI Track, Projects using machine learning\nWeb Track, Frontend & backend projects"}
-        value={csv}
-        onChange={e => { setCsv(e.target.value); parseCsv(e.target.value); }}
-      />
+      <p className="mb-2 text-xs text-fg-subtle">Format: <code className="font-mono">Track Name, Description (optional)</code></p>
+      {/* Tabs */}
+      <div className="mb-3 flex gap-1 rounded-lg border border-bg-border bg-bg-muted p-0.5">
+        {(['paste', 'file'] as const).map(t => (
+          <button type="button" key={t} onClick={() => setTab(t)}
+            className={`flex-1 rounded-md py-1 text-xs font-medium transition-colors ${tab === t ? 'bg-bg-base text-fg-default shadow-sm' : 'text-fg-subtle hover:text-fg-muted'}`}>
+            {t === 'paste' ? 'Paste CSV' : 'Upload File'}
+          </button>
+        ))}
+      </div>
+      {tab === 'paste' ? (
+        <textarea className="input mb-3 h-24 w-full resize-none font-mono text-xs"
+          placeholder={"AI Track, Projects using machine learning\nWeb Track, Frontend & backend projects"}
+          value={csv} onChange={e => { setCsv(e.target.value); parseText(e.target.value); }} />
+      ) : (
+        <label className="mb-3 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-bg-border bg-bg-subtle py-6 text-xs text-fg-muted transition-colors hover:border-fg-muted/30 hover:bg-bg-muted">
+          <Upload size={18} className="text-fg-subtle" />
+          {fileName ? <span className="font-mono text-fg-default">{fileName}</span> : <span>Click to choose a .csv file</span>}
+          <input type="file" accept=".csv,text/csv" className="hidden" onChange={onFileChange} />
+        </label>
+      )}
       {preview.length > 0 && (
         <div className="mb-3">
           <p className="mb-1 text-xs text-fg-muted">{preview.length} track{preview.length !== 1 ? 's' : ''} detected:</p>
@@ -655,7 +685,7 @@ function BulkImportTracks({ onImport }: { onImport: (tracks: Track[]) => void })
           </div>
         </div>
       )}
-      <button type="button" disabled={preview.length === 0} onClick={() => { onImport(preview); setOpen(false); setCsv(''); setPreview([]); }} className="btn-primary w-full justify-center text-sm disabled:opacity-40">
+      <button type="button" disabled={preview.length === 0} onClick={() => { onImport(preview); reset(); }} className="btn-primary w-full justify-center text-sm disabled:opacity-40">
         Import {preview.length > 0 ? preview.length : ''} Tracks
       </button>
     </div>
@@ -665,47 +695,105 @@ function BulkImportTracks({ onImport }: { onImport: (tracks: Track[]) => void })
 /* ─── Bulk Import: Teams ─── */
 function BulkImportTeams({ tracks, onImport }: { tracks: Track[]; onImport: (teams: Team[]) => void }) {
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<'paste' | 'file'>('paste');
   const [csv, setCsv] = useState('');
   const [preview, setPreview] = useState<Team[]>([]);
+  const [fileName, setFileName] = useState('');
 
-  function parseCsv(text: string) {
+  function findTrack(trackName: string) {
+    if (!trackName) return tracks[0]?.id ?? null;
+    const tn = trackName.toLowerCase();
+    return (
+      tracks.find(t => t.name.toLowerCase() === tn)?.id ??
+      tracks.find(t => t.name.toLowerCase().includes(tn) || tn.includes(t.name.toLowerCase()))?.id ??
+      tracks[0]?.id ?? null
+    );
+  }
+
+  function parseText(text: string) {
     const lines = text.trim().split('\n').filter(Boolean);
-    const parsed: Team[] = lines.map(line => {
-      const [name = '', leader = '', table = '', trackName = ''] = line.split(',').map(s => s.trim());
-      const track = tracks.find(t => t.name.toLowerCase() === trackName.toLowerCase());
-      return { id: uid('team'), name, leader, table_number: table, track_id: track?.id ?? tracks[0]?.id ?? null, project_title: '', project_desc: '' };
+    // Skip header if first column looks like a header word
+    const start = /^(team.?name|name|team)/i.test(lines[0]?.split(',')[0] ?? '') ? 1 : 0;
+    const parsed: Team[] = lines.slice(start).map(line => {
+      const cols = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+      // Flexible: Team Name, Leader, Track — any extra cols ignored
+      const [name = '', leader = '', ...rest] = cols;
+      // Track could be col 2 or col 3 (if col 2 looks like a number = table#)
+      let trackName = '';
+      let table_number = '';
+      if (rest.length === 1) {
+        // Could be track or table — check if it's a number
+        if (/^\d+$/.test(rest[0])) { table_number = rest[0]; }
+        else { trackName = rest[0]; }
+      } else if (rest.length >= 2) {
+        // col2 = table#, col3 = track (or vice versa)
+        if (/^\d+$/.test(rest[0])) { table_number = rest[0]; trackName = rest[1] ?? ''; }
+        else { trackName = rest[0]; table_number = rest[1] ?? ''; }
+      }
+      return { id: uid('team'), name, leader, table_number, track_id: findTrack(trackName), project_title: '', project_desc: '' };
     }).filter(t => t.name);
     setPreview(parsed);
   }
 
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = ev => { const text = ev.target?.result as string; setCsv(text); parseText(text); };
+    reader.readAsText(file);
+  }
+
+  function reset() { setOpen(false); setCsv(''); setPreview([]); setFileName(''); }
+
   if (!open) return (
     <button type="button" onClick={() => setOpen(true)} className="btn-ghost w-full justify-center text-xs text-fg-subtle">
-      <Upload size={14} /> Bulk import via CSV paste
+      <Upload size={14} /> Bulk import teams
     </button>
   );
 
   return (
     <div className="card p-4">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-medium text-fg-default">Bulk Import Teams</p>
-        <button type="button" onClick={() => { setOpen(false); setCsv(''); setPreview([]); }} className="text-xs text-fg-muted">Cancel</button>
+        <button type="button" onClick={reset} className="text-xs text-fg-muted">Cancel</button>
       </div>
-      <p className="mb-3 text-xs text-fg-subtle">One team per line: <code className="font-mono">Team Name, Leader Name, Table#, Track Name</code></p>
-      <textarea
-        className="input mb-3 h-32 w-full resize-none font-mono text-xs"
-        placeholder={"Team Alpha, Alice, 12, AI Track\nTeam Beta, Dave, 5, Web Track"}
-        value={csv}
-        onChange={e => { setCsv(e.target.value); parseCsv(e.target.value); }}
-      />
+      <p className="mb-2 text-xs text-fg-subtle">Format: <code className="font-mono">Team Name, Leader Name, Track</code> — extra columns (table #) handled automatically</p>
+      {/* Tabs */}
+      <div className="mb-3 flex gap-1 rounded-lg border border-bg-border bg-bg-muted p-0.5">
+        {(['paste', 'file'] as const).map(t => (
+          <button type="button" key={t} onClick={() => setTab(t)}
+            className={`flex-1 rounded-md py-1 text-xs font-medium transition-colors ${tab === t ? 'bg-bg-base text-fg-default shadow-sm' : 'text-fg-subtle hover:text-fg-muted'}`}>
+            {t === 'paste' ? 'Paste CSV' : 'Upload File'}
+          </button>
+        ))}
+      </div>
+      {tab === 'paste' ? (
+        <textarea className="input mb-3 h-32 w-full resize-none font-mono text-xs"
+          placeholder={"Team Alpha, Alice, AI Track\nTeam Beta, Dave, Web Track\nTeam Gamma, Sara"}
+          value={csv} onChange={e => { setCsv(e.target.value); parseText(e.target.value); }} />
+      ) : (
+        <label className="mb-3 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-bg-border bg-bg-subtle py-6 text-xs text-fg-muted transition-colors hover:border-fg-muted/30 hover:bg-bg-muted">
+          <Upload size={18} className="text-fg-subtle" />
+          {fileName ? <span className="font-mono text-fg-default">{fileName}</span> : <span>Click to choose a .csv file</span>}
+          <input type="file" accept=".csv,text/csv" className="hidden" onChange={onFileChange} />
+        </label>
+      )}
       {preview.length > 0 && (
         <div className="mb-3">
           <p className="mb-1 text-xs text-fg-muted">{preview.length} team{preview.length !== 1 ? 's' : ''} detected:</p>
-          <div className="flex flex-wrap gap-1">
-            {preview.map(t => <span key={t.id} className="rounded-full bg-bg-muted px-2 py-0.5 text-xs text-fg-muted">{t.name}</span>)}
+          <div className="flex flex-wrap gap-1.5">
+            {preview.map(t => (
+              <span key={t.id} className="flex items-center gap-1 rounded-full bg-bg-muted px-2 py-0.5 text-xs text-fg-muted">
+                {t.name}
+                {t.leader && <span className="text-fg-subtle">· {t.leader}</span>}
+                {t.track_id && <span className="text-fg-subtle">· {tracks.find(tr => tr.id === t.track_id)?.name ?? t.track_id}</span>}
+              </span>
+            ))}
           </div>
         </div>
       )}
-      <button type="button" disabled={preview.length === 0} onClick={() => { onImport(preview); setOpen(false); setCsv(''); setPreview([]); }} className="btn-primary w-full justify-center text-sm disabled:opacity-40">
+      <button type="button" disabled={preview.length === 0} onClick={() => { onImport(preview); reset(); }} className="btn-primary w-full justify-center text-sm disabled:opacity-40">
         Import {preview.length > 0 ? preview.length : ''} Teams
       </button>
     </div>
@@ -715,49 +803,86 @@ function BulkImportTeams({ tracks, onImport }: { tracks: Track[]; onImport: (tea
 /* ─── Bulk Import: Judges ─── */
 function BulkImportJudges({ tracks, onImport }: { tracks: Track[]; onImport: (judges: Judge[]) => void }) {
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<'paste' | 'file'>('paste');
   const [csv, setCsv] = useState('');
   const [preview, setPreview] = useState<Judge[]>([]);
+  const [fileName, setFileName] = useState('');
 
-  function parseCsv(text: string) {
+  function parseText(text: string) {
     const lines = text.trim().split('\n').filter(Boolean);
-    const parsed: Judge[] = lines.map(line => {
-      const [name = '', email = '', ...trackNames] = line.split(',').map(s => s.trim());
-      const assignedTracks = trackNames.length > 0
-        ? trackNames.map(tn => tracks.find(t => t.name.toLowerCase() === tn.toLowerCase())?.id).filter(Boolean) as string[]
+    const start = /^(name|judge|judge.?name)/i.test(lines[0]?.split(',')[0] ?? '') ? 1 : 0;
+    const parsed: Judge[] = lines.slice(start).map(line => {
+      const cols = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+      const [name = '', email = '', ...trackNames] = cols;
+      const assignedTracks = trackNames.filter(Boolean).length > 0
+        ? trackNames.filter(Boolean).map(tn => {
+            const tnl = tn.toLowerCase();
+            return tracks.find(t => t.name.toLowerCase() === tnl)?.id ??
+                   tracks.find(t => t.name.toLowerCase().includes(tnl) || tnl.includes(t.name.toLowerCase()))?.id;
+          }).filter(Boolean) as string[]
         : ['all'];
       return { id: uid('judge'), name, email, tracks: assignedTracks.length > 0 ? assignedTracks : ['all'] };
     }).filter(j => j.name && j.email.includes('@'));
     setPreview(parsed);
   }
 
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = ev => { const text = ev.target?.result as string; setCsv(text); parseText(text); };
+    reader.readAsText(file);
+  }
+
+  function reset() { setOpen(false); setCsv(''); setPreview([]); setFileName(''); }
+
   if (!open) return (
     <button type="button" onClick={() => setOpen(true)} className="btn-ghost w-full justify-center text-xs text-fg-subtle">
-      <Upload size={14} /> Bulk import via CSV paste
+      <Upload size={14} /> Bulk import judges
     </button>
   );
 
   return (
     <div className="card p-4">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-medium text-fg-default">Bulk Import Judges</p>
-        <button type="button" onClick={() => { setOpen(false); setCsv(''); setPreview([]); }} className="text-xs text-fg-muted">Cancel</button>
+        <button type="button" onClick={reset} className="text-xs text-fg-muted">Cancel</button>
       </div>
-      <p className="mb-3 text-xs text-fg-subtle">One judge per line: <code className="font-mono">Name, email@domain.com, Track Name (optional)</code></p>
-      <textarea
-        className="input mb-3 h-32 w-full resize-none font-mono text-xs"
-        placeholder={"Dr. Sharma, sharma@iit.ac.in, AI Track\nProf. Nair, nair@mit.edu"}
-        value={csv}
-        onChange={e => { setCsv(e.target.value); parseCsv(e.target.value); }}
-      />
+      <p className="mb-2 text-xs text-fg-subtle">Format: <code className="font-mono">Name, email@domain.com, Track (optional)</code></p>
+      {/* Tabs */}
+      <div className="mb-3 flex gap-1 rounded-lg border border-bg-border bg-bg-muted p-0.5">
+        {(['paste', 'file'] as const).map(t => (
+          <button type="button" key={t} onClick={() => setTab(t)}
+            className={`flex-1 rounded-md py-1 text-xs font-medium transition-colors ${tab === t ? 'bg-bg-base text-fg-default shadow-sm' : 'text-fg-subtle hover:text-fg-muted'}`}>
+            {t === 'paste' ? 'Paste CSV' : 'Upload File'}
+          </button>
+        ))}
+      </div>
+      {tab === 'paste' ? (
+        <textarea className="input mb-3 h-32 w-full resize-none font-mono text-xs"
+          placeholder={"Dr. Sharma, sharma@iit.ac.in, AI Track\nProf. Nair, nair@mit.edu"}
+          value={csv} onChange={e => { setCsv(e.target.value); parseText(e.target.value); }} />
+      ) : (
+        <label className="mb-3 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-bg-border bg-bg-subtle py-6 text-xs text-fg-muted transition-colors hover:border-fg-muted/30 hover:bg-bg-muted">
+          <Upload size={18} className="text-fg-subtle" />
+          {fileName ? <span className="font-mono text-fg-default">{fileName}</span> : <span>Click to choose a .csv file</span>}
+          <input type="file" accept=".csv,text/csv" className="hidden" onChange={onFileChange} />
+        </label>
+      )}
       {preview.length > 0 && (
         <div className="mb-3">
           <p className="mb-1 text-xs text-fg-muted">{preview.length} judge{preview.length !== 1 ? 's' : ''} detected:</p>
-          <div className="flex flex-wrap gap-1">
-            {preview.map(j => <span key={j.id} className="rounded-full bg-bg-muted px-2 py-0.5 text-xs text-fg-muted">{j.name}</span>)}
+          <div className="flex flex-wrap gap-1.5">
+            {preview.map(j => (
+              <span key={j.id} className="flex items-center gap-1 rounded-full bg-bg-muted px-2 py-0.5 text-xs text-fg-muted">
+                {j.name} <span className="text-fg-subtle">· {j.email}</span>
+              </span>
+            ))}
           </div>
         </div>
       )}
-      <button type="button" disabled={preview.length === 0} onClick={() => { onImport(preview); setOpen(false); setCsv(''); setPreview([]); }} className="btn-primary w-full justify-center text-sm disabled:opacity-40">
+      <button type="button" disabled={preview.length === 0} onClick={() => { onImport(preview); reset(); }} className="btn-primary w-full justify-center text-sm disabled:opacity-40">
         Import {preview.length > 0 ? preview.length : ''} Judges
       </button>
     </div>
