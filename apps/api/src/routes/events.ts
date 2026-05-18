@@ -222,17 +222,108 @@ router.get("/:slug", async (req, res) => {
 router.patch("/:slug/config", requireAuth, requireOrganizer, async (req: AuthRequest, res) => {
   const event = await prisma.event.findUnique({ where: { slug: req.params.slug } });
   if (!event) { res.status(404).json(error("EVENT_NOT_FOUND", "Event not found")); return; }
+
+  const hasStructural = req.body.tracks !== undefined || req.body.teams !== undefined ||
+    req.body.judges !== undefined || req.body.criteria !== undefined;
+
+  if (hasStructural) {
+    const trackSchema = z.object({ id: z.string(), name: z.string().min(1), description: z.string().default("") });
+    const criterionSchema = z.object({
+      id: z.string(), name: z.string().min(1), weight: z.number().min(0).max(1),
+      max_score: z.number().int().min(1), track_id: z.string().nullable().optional(),
+      scoring_type: z.string().default("numeric"),
+    });
+    const teamSchema = z.object({
+      id: z.string(), name: z.string().min(1),
+      track_id: z.string().nullable().optional(), table_number: z.string().default(""),
+    });
+    const judgeSchema = z.object({
+      id: z.string(), name: z.string().min(1), email: z.string().email(),
+      tracks: z.array(z.string()).default([]),
+    });
+    const schema = z.object({
+      name: z.string().min(1).optional(), description: z.string().optional(), timezone: z.string().optional(),
+      tracks: z.array(trackSchema).optional(),
+      criteria: z.array(criterionSchema).optional(),
+      teams: z.array(teamSchema).optional(),
+      judges: z.array(judgeSchema).optional(),
+    });
+    const parse = schema.safeParse(req.body);
+    if (!parse.success) { res.status(400).json(error("VALIDATION_ERROR", "Invalid request", parse.error.format())); return; }
+    const d = parse.data;
+    const cfg = event.configJson as any;
+
+    // Delete all structural records in safe order
+    await prisma.score.deleteMany({ where: { eventId: event.id } });
+    await prisma.scoreSubmission.deleteMany({ where: { eventId: event.id } });
+    await prisma.assignment.deleteMany({ where: { eventId: event.id } });
+    const judgeIds = (await prisma.judge.findMany({ where: { eventId: event.id }, select: { id: true } })).map(j => j.id);
+    if (judgeIds.length > 0) await prisma.judgeTrack.deleteMany({ where: { judgeId: { in: judgeIds } } });
+    await prisma.judge.deleteMany({ where: { eventId: event.id } });
+    await prisma.team.deleteMany({ where: { eventId: event.id } });
+    await prisma.criterion.deleteMany({ where: { eventId: event.id } });
+    await prisma.track.deleteMany({ where: { eventId: event.id } });
+
+    // Recreate tracks
+    const trackMap = new Map<string, string>();
+    for (const t of d.tracks ?? []) {
+      const created = await prisma.track.create({ data: { eventId: event.id, name: t.name, description: t.description } });
+      trackMap.set(t.id, created.id);
+    }
+    // Recreate criteria
+    for (const c of d.criteria ?? []) {
+      await prisma.criterion.create({
+        data: {
+          eventId: event.id, name: c.name, weight: c.weight, maxScore: c.max_score,
+          scoringType: c.scoring_type, rubric: null,
+          trackId: c.track_id ? (trackMap.get(c.track_id) ?? null) : null,
+        },
+      });
+    }
+    // Recreate teams
+    for (const t of d.teams ?? []) {
+      await prisma.team.create({
+        data: {
+          eventId: event.id, name: t.name, tableNumber: t.table_number, members: [],
+          trackId: t.track_id ? (trackMap.get(t.track_id) ?? null) : null,
+        },
+      });
+    }
+    // Recreate judges
+    for (const j of d.judges ?? []) {
+      const created = await prisma.judge.create({ data: { eventId: event.id, name: j.name, email: j.email } });
+      for (const tid of j.tracks) {
+        if (tid === "all") continue;
+        const resolvedId = trackMap.get(tid);
+        if (!resolvedId) continue;
+        await prisma.judgeTrack.create({ data: { judgeId: created.id, trackId: resolvedId } });
+      }
+    }
+
+    const updatedConfig = {
+      ...cfg,
+      event: { ...cfg.event, ...(d.name ? { name: d.name } : {}), ...(d.description !== undefined ? { description: d.description } : {}), ...(d.timezone ? { timezone: d.timezone } : {}) },
+      tracks: d.tracks ?? cfg.tracks,
+      criteria: d.criteria ?? cfg.criteria,
+      teams: d.teams ?? cfg.teams,
+      judges: d.judges ?? cfg.judges,
+    };
+    await prisma.event.update({ where: { slug: req.params.slug }, data: { configJson: updatedConfig } });
+    await auditLog(event.id, req.user!.id, "organizer", "event_structural_update", { slug: event.slug });
+    res.json(success({ updated: true, structural: true }));
+    return;
+  }
+
+  // Simple basic-info update (no DB cascade)
   const schema = z.object({
     name: z.string().min(1).optional(),
     description: z.string().optional(),
     timezone: z.string().optional(),
-    judging_opens_at: z.string().optional(),
-    judging_closes_at: z.string().optional(),
   });
   const parse = schema.safeParse(req.body);
   if (!parse.success) { res.status(400).json(error("VALIDATION_ERROR", "Invalid request")); return; }
-  const config = event.configJson as any;
-  const updatedConfig = { ...config, event: { ...config.event, ...parse.data } };
+  const cfg = event.configJson as any;
+  const updatedConfig = { ...cfg, event: { ...cfg.event, ...parse.data } };
   await prisma.event.update({ where: { slug: req.params.slug }, data: { configJson: updatedConfig } });
   await auditLog(event.id, req.user!.id, "organizer", "event_config_updated", parse.data);
   res.json(success({ updated: true }));
