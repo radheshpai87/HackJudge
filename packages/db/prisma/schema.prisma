@@ -161,6 +161,7 @@ model ScoreSubmission {
   teamId      String   @map("team_id") @db.ObjectId
   eventId     String   @map("event_id") @db.ObjectId
   completedAt DateTime @default(now()) @map("completed_at")
+  notes       String?
 
   judge Judge @relation(fields: [judgeId], references: [id])
   team  Team  @relation(fields: [teamId], references: [id])
