@@ -1,43 +1,29 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { motion, useReducedMotion } from 'framer-motion';
-import { colors, typography, space, radius, pageVariants } from '@hackjudge/shared';
-import { Award } from 'lucide-react';
+import { Award, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default function CertificatesPage() {
   const { slug } = useParams();
-  const reduced = useReducedMotion();
 
   return (
-    <motion.main
-      initial={reduced ? undefined : 'hidden'}
-      animate="visible"
-      variants={pageVariants}
-      style={{ minHeight: '100vh', backgroundColor: colors.bg.base, padding: space[8] }}
-    >
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        <h1 style={{ fontFamily: typography.fontFamily.sans, fontSize: typography.size['2xl'], fontWeight: typography.weight.semibold, color: colors.fg.default, margin: `0 0 ${space[6]} 0` }}>
-          Certificates
-        </h1>
-        <div
-          style={{
-            borderRadius: radius.lg,
-            border: `1px solid ${colors.bg.border}`,
-            backgroundColor: colors.bg.subtle,
-            padding: space[10],
-            textAlign: 'center',
-          }}
-        >
-          <Award size={40} style={{ color: colors.fg.muted, marginBottom: space[4] }} />
-          <p style={{ fontFamily: typography.fontFamily.sans, fontSize: typography.size.md, color: colors.fg.default, margin: `0 0 ${space[2]} 0` }}>
-            Coming soon
-          </p>
-          <p style={{ fontFamily: typography.fontFamily.sans, fontSize: typography.size.sm, color: colors.fg.muted }}>
-            Certificate generation for event {slug} will be available in a future update.
+    <main className="page-shell px-6 py-10">
+      <div className="container-tight">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-fg-default">Certificates</h1>
+          <Link href={`/events/${slug}`} className="btn-ghost text-sm text-fg-muted">
+            <ArrowLeft size={16} /> Dashboard
+          </Link>
+        </div>
+        <div className="card flex flex-col items-center px-10 py-16 text-center">
+          <Award size={40} className="mb-4 text-fg-muted" />
+          <p className="text-base font-medium text-fg-default">Coming soon</p>
+          <p className="mt-2 text-sm text-fg-muted">
+            Certificate generation for <span className="font-mono text-xs text-fg-subtle">{slug}</span> will be available in a future update.
           </p>
         </div>
       </div>
-    </motion.main>
+    </main>
   );
 }

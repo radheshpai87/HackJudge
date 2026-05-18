@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { colors, typography, space } from '@hackjudge/shared';
+import { Loader2, XCircle } from 'lucide-react';
+import Link from 'next/link';
 
 export default function VerifyPage() {
   const params = useSearchParams();
@@ -19,9 +20,7 @@ export default function VerifyPage() {
       return;
     }
 
-    const magicToken = token;
-
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/auth/verify/${magicToken.trim()}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/auth/verify/${token.trim()}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.success) {
@@ -41,51 +40,21 @@ export default function VerifyPage() {
   }, [params]);
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        backgroundColor: colors.bg.base,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: space[8],
-      }}
-    >
-      <div style={{ textAlign: 'center' }}>
+    <main className="page-shell flex min-h-screen items-center justify-center px-6">
+      <div className="text-center">
         {status === 'verifying' ? (
           <>
-            <div style={{ fontSize: 40, marginBottom: space[4] }}>⟳</div>
-            <p style={{ fontFamily: typography.fontFamily.sans, fontSize: typography.size.base, color: colors.fg.muted }}>
-              Verifying your magic link…
-            </p>
+            <Loader2 size={36} className="mx-auto mb-4 animate-spin text-fg-muted" />
+            <p className="text-sm text-fg-muted">Verifying your magic link…</p>
           </>
         ) : (
           <>
-            <div style={{ fontSize: 40, marginBottom: space[4] }}>✕</div>
-            <p
-              style={{
-                fontFamily: typography.fontFamily.sans,
-                fontSize: typography.size.base,
-                color: colors.fg.default,
-                marginBottom: space[4],
-              }}
-            >
-              {message}
-            </p>
-            <a
-              href="/"
-              style={{
-                fontFamily: typography.fontFamily.sans,
-                fontSize: typography.size.sm,
-                color: colors.fg.muted,
-                textDecoration: 'underline',
-              }}
-            >
-              Back to home
-            </a>
+            <XCircle size={36} className="mx-auto mb-4 text-semantic-error" />
+            <p className="mb-4 text-sm text-fg-default">{message}</p>
+            <Link href="/" className="text-sm text-fg-muted underline">Back to home</Link>
           </>
         )}
       </div>
-    </div>
+    </main>
   );
 }
