@@ -36,15 +36,18 @@ export default function JudgePortal() {
   const [lastProgress, setLastProgress] = useState({ completed: 0, totalAssigned: 0 });
 
   useEffect(() => {
-    apiFetch(`/events/${slug}`).then((ev) => { if (ev.success) setEventConfig({ event: ev.data.event, tracks: ev.data.tracks }); });
+    let mounted = true;
+    apiFetch(`/events/${slug}`).then((ev) => { if (mounted && ev.success) setEventConfig({ event: ev.data.event, tracks: ev.data.tracks }); });
     const stored = localStorage.getItem(tokenKey(slug));
-    if (!stored) { setScreen('auth'); return; }
+    if (!stored) { if (mounted) setScreen('auth'); return; }
     apiFetch(`/events/${slug}/judges/me`, stored)
       .then((data) => {
+        if (!mounted) return;
         if (data.success) { setAuthToken(stored); setJudgeState(data.data); setLastProgress(data.data.progress); setScreen('home'); }
         else { localStorage.removeItem(tokenKey(slug)); setScreen('auth'); }
       })
-      .catch(() => setScreen('auth'));
+      .catch(() => { if (mounted) setScreen('auth'); });
+    return () => { mounted = false; };
   }, [slug]);
 
   const refreshJudgeState = useCallback(async (token: string) => {

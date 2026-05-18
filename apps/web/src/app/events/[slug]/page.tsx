@@ -37,9 +37,13 @@ export default function EventDashboard() {
   }
 
   useEffect(() => {
-    fetch(`${API}/events/${slug}`).then((r) => r.json()).then((d) => setEvent(d.data));
-    fetch(`${API}/events/${slug}/status`).then((r) => r.json()).then((d) => setStatus(d.data));
+    const ctrl = new AbortController();
+    fetch(`${API}/events/${slug}`, { signal: ctrl.signal })
+      .then((r) => r.json()).then((d) => setEvent(d.data)).catch(() => {});
+    fetch(`${API}/events/${slug}/status`, { signal: ctrl.signal })
+      .then((r) => r.json()).then((d) => setStatus(d.data)).catch(() => {});
     reloadJudges();
+    return () => ctrl.abort();
   }, [slug]);
 
   if (!event) {
