@@ -140,8 +140,6 @@ export default function NewEventPage() {
     }
   }, []);
 
-  if (!authed) return null;
-
   /* ─── Validation ─── */
   const canNext = useMemo(() => {
     switch (step) {
@@ -155,6 +153,8 @@ export default function NewEventPage() {
       default: return false;
     }
   }, [step, data]);
+
+  if (!authed) return null;
 
   /* ─── Weight auto-normalize ─── */
   const normalizeWeights = (criteria: Criterion[]) => {
