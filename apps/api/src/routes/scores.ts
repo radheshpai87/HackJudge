@@ -52,21 +52,10 @@ router.put("/:slug/scores", requireAuth, requireJudge, async (req: AuthRequest, 
     return;
   }
 
-  // Get criteria relevant to this team's track (track-specific + global null-track)
   const allCriteria = await prisma.criterion.findMany({ where: { eventId: event.id } });
-  const relevantCriteria = allCriteria.filter(
-    (c) => c.trackId === null || c.trackId === team.trackId
-  );
   const critMap = new Map(allCriteria.map((c) => [c.id, c]));
 
-  const submittedCritIds = new Set(scores.map((s) => s.criterionId));
-  const missing = relevantCriteria.filter((c) => !submittedCritIds.has(c.id));
-  if (missing.length > 0) {
-    res.status(400).json(error("PARTIAL_SCORES", `Missing criteria: ${missing.map((m) => m.name).join(", ")}`));
-    return;
-  }
-
-  // Validate rubric scores
+  // Validate rubric scores that are actually submitted (draft saves may be partial)
   for (const s of scores) {
     const crit = critMap.get(s.criterionId);
     if (!crit) {
@@ -127,25 +116,25 @@ router.post("/:slug/scores/submit", requireAuth, requireJudge, async (req: AuthR
     res.status(404).json(error("EVENT_NOT_FOUND", "Event not found"));
     return;
   }
-  const schema = z.object({ teamId: z.string() });
+  const schema = z.object({ teamId: z.string(), notes: z.string().optional() });
   const parse = schema.safeParse(req.body);
   if (!parse.success) {
     res.status(400).json(error("VALIDATION_ERROR", "Invalid request"));
     return;
   }
 
-  const { teamId } = parse.data;
+  const { teamId, notes } = parse.data;
   const existingSub = await prisma.scoreSubmission.findFirst({
     where: { judgeId: req.user!.id, teamId },
   });
   if (existingSub) {
     await prisma.scoreSubmission.update({
       where: { id: existingSub.id },
-      data: { completedAt: new Date() },
+      data: { completedAt: new Date(), ...(notes !== undefined ? { notes } : {}) } as any,
     });
   } else {
     await prisma.scoreSubmission.create({
-      data: { judgeId: req.user!.id, teamId, eventId: event.id },
+      data: { judgeId: req.user!.id, teamId, eventId: event.id, ...(notes !== undefined ? { notes } : {}) } as any,
     });
   }
 
@@ -158,39 +147,18 @@ router.post("/:slug/scores/submit", requireAuth, requireJudge, async (req: AuthR
   res.json(success({ submitted: true }));
 });
 
-/* ─── UNDO SUBMISSION ─── */
-router.post("/:slug/scores/undo", requireAuth, requireJudge, async (req: AuthRequest, res) => {
+/* ─── UPDATE NOTES ON EXISTING SUBMISSION ─── */
+router.put("/:slug/scores/notes", requireAuth, requireJudge, async (req: AuthRequest, res) => {
   const event = await prisma.event.findUnique({ where: { slug: req.params.slug } });
-  if (!event) {
-    res.status(404).json(error("EVENT_NOT_FOUND", "Event not found"));
-    return;
-  }
-  const schema = z.object({ teamId: z.string() });
+  if (!event) { res.status(404).json(error("EVENT_NOT_FOUND", "Event not found")); return; }
+  const schema = z.object({ teamId: z.string(), notes: z.string() });
   const parse = schema.safeParse(req.body);
-  if (!parse.success) {
-    res.status(400).json(error("VALIDATION_ERROR", "Invalid request"));
-    return;
-  }
-  const { teamId } = parse.data;
-
-  const submission = await prisma.scoreSubmission.findFirst({
-    where: { judgeId: req.user!.id, teamId },
-  });
-  if (!submission) {
-    res.status(404).json(error("SUBMISSION_NOT_FOUND", "No submission found to undo"));
-    return;
-  }
-
-  // Check undo window (30 minutes after submission)
-  const undoWindowMs = 30 * 60_000;
-  if (Date.now() - submission.completedAt.getTime() > undoWindowMs) {
-    res.status(403).json(error("UNDO_WINDOW_EXPIRED", "Undo window has expired (30 minutes)"));
-    return;
-  }
-
-  await prisma.scoreSubmission.delete({ where: { id: submission.id } });
-  await auditLog(event.id, req.user!.id, "judge", "scores_undone", { teamId });
-  res.json(success({ undone: true }));
+  if (!parse.success) { res.status(400).json(error("VALIDATION_ERROR", "Invalid request")); return; }
+  const { teamId, notes } = parse.data;
+  const submission = await prisma.scoreSubmission.findFirst({ where: { judgeId: req.user!.id, teamId } });
+  if (!submission) { res.status(404).json(error("SUBMISSION_NOT_FOUND", "Submit scores first before saving notes")); return; }
+  await prisma.scoreSubmission.update({ where: { id: submission.id }, data: { notes } as any });
+  res.json(success({ updated: true }));
 });
 
 router.get("/:slug/scores", requireAuth, async (req: AuthRequest, res) => {

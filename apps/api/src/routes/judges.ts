@@ -121,6 +121,22 @@ router.delete("/:slug/judges/:judgeId/pin", requireAuth, requireOrganizer, async
   res.json(success({ cleared: true }));
 });
 
+router.get("/:slug/judges/my-scores/:teamId", requireAuth, requireJudge, async (req: AuthRequest, res) => {
+  const event = await prisma.event.findUnique({ where: { slug: req.params.slug } });
+  if (!event) { res.status(404).json(error("EVENT_NOT_FOUND", "Event not found")); return; }
+  const team = await prisma.team.findFirst({ where: { id: req.params.teamId, eventId: event.id } });
+  if (!team) { res.status(404).json(error("TEAM_NOT_FOUND", "Team not found")); return; }
+  const [scores, submission] = await Promise.all([
+    prisma.score.findMany({ where: { judgeId: req.user!.id, teamId: req.params.teamId } }),
+    prisma.scoreSubmission.findFirst({ where: { judgeId: req.user!.id, teamId: req.params.teamId } }),
+  ]);
+  res.json(success({
+    scores: scores.map((s) => ({ criterionId: s.criterionId, value: s.value })),
+    notes: (submission as any)?.notes ?? '',
+    submitted: !!submission,
+  }));
+});
+
 router.get("/:slug/criteria", requireAuth, async (req: AuthRequest, res) => {
   const event = await prisma.event.findUnique({ where: { slug: req.params.slug } });
   if (!event) {
