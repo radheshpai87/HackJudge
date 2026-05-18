@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { motion, useReducedMotion } from 'framer-motion';
-import { Activity, BarChart3, Users, CheckCircle, FileBarChart, QrCode, Copy, ExternalLink, CalendarRange, LayoutList, Tag, KeyRound, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Activity, BarChart3, Users, CheckCircle, QrCode, Copy, ExternalLink, Clock, KeyRound, ShieldCheck, Eye, EyeOff, Trophy, Settings } from 'lucide-react';
 import Link from 'next/link';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
@@ -12,13 +11,10 @@ function getAppBase() {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
   if (typeof window === 'undefined') return 'http://localhost:3000';
   const origin = window.location.origin;
-  // If the organizer opened via localhost but API is on a LAN IP, use that IP for shareable URLs
   if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
     try {
       const apiHost = new URL(API).hostname;
-      if (apiHost !== 'localhost' && apiHost !== '127.0.0.1') {
-        return `http://${apiHost}:3000`;
-      }
+      if (apiHost !== 'localhost' && apiHost !== '127.0.0.1') return `http://${apiHost}:3000`;
     } catch { /* fall through */ }
   }
   return origin;
@@ -31,16 +27,12 @@ export default function EventDashboard() {
   const [judges, setJudges] = useState<any[]>([]);
   const [notOrg, setNotOrg] = useState(false);
   const [copiedPortal, setCopiedPortal] = useState(false);
-  const reduced = useReducedMotion();
 
   function reloadJudges() {
     const orgToken = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
     if (!orgToken) { setNotOrg(true); return; }
     fetch(`${API}/events/${slug}/judges`, { headers: { Authorization: `Bearer ${orgToken}` } })
-      .then((r) => {
-        if (r.status === 401) { setNotOrg(true); return r.json(); }
-        return r.json();
-      })
+      .then((r) => { if (r.status === 401) { setNotOrg(true); return r.json(); } return r.json(); })
       .then((d) => { if (d?.success) { setJudges(d.data); setNotOrg(false); } });
   }
 
@@ -53,132 +45,105 @@ export default function EventDashboard() {
   if (!event) {
     return (
       <div className="page-shell flex min-h-screen items-center justify-center">
-        <p className="text-sm text-fg-muted">Loading...</p>
+        <p className="text-sm text-fg-muted">Loading…</p>
       </div>
     );
   }
 
   const eventName = event?.event?.name ?? 'Untitled Event';
-  const eventSlug = event?.slug ?? String(slug);
-  const completionPct = status?.completionPercentage ?? 0;
+  const judgingStatus: string = event?.status ?? 'not_started';
+  const totalAssignments = status?.totalAssignments ?? 0;
+  const completedSubmissions = status?.completedSubmissions ?? 0;
+  const completionPct = totalAssignments > 0 ? Math.round((completedSubmissions / totalAssignments) * 100) : 0;
+
+  const statusBadge = {
+    open: 'border-semantic-success/30 bg-semantic-success/10 text-semantic-success',
+    closed: 'border-semantic-error/30 bg-semantic-error/10 text-semantic-error',
+    not_started: 'border-fg-muted/30 bg-bg-muted text-fg-muted',
+  }[judgingStatus] ?? 'border-fg-muted/30 bg-bg-muted text-fg-muted';
+
+  const statusLabel = { open: 'Open', closed: 'Closed', not_started: 'Not Started' }[judgingStatus] ?? judgingStatus;
 
   return (
     <div className="page-shell flex min-h-screen">
       {/* Sidebar */}
-      <aside className="hidden w-60 flex-shrink-0 flex-col border-r border-bg-border bg-bg-subtle p-6 md:flex">
-        <div>
-          <h2 className="truncate text-base font-semibold text-fg-default">{eventName}</h2>
-          <p className="mt-1 font-mono text-2xs text-fg-subtle">{eventSlug}</p>
+      <aside className="hidden w-56 flex-shrink-0 flex-col border-r border-bg-border bg-bg-subtle p-5 md:flex">
+        <div className="mb-1">
+          <h2 className="truncate text-sm font-semibold text-fg-default">{eventName}</h2>
+          <p className="mt-0.5 font-mono text-2xs text-fg-subtle">{String(slug)}</p>
         </div>
 
-        <nav className="mt-6 flex flex-col gap-1">
-          <SidebarLink href={`/events/${slug}`} icon={<Activity size={16} />} label="Dashboard" active />
-          <SidebarLink href={`/events/${slug}/results`} icon={<BarChart3 size={16} />} label="Results" />
-          <SidebarLink href={`/events/${slug}/leaderboard`} icon={<Users size={16} />} label="Leaderboard" />
-          <SidebarLink href={`/events/${slug}/judge`} icon={<QrCode size={16} />} label="Judge Portal" />
-          <SidebarLink href={`/events/${slug}/config`} icon={<FileBarChart size={16} />} label="Config" />
+        <nav className="mt-5 flex flex-col gap-0.5">
+          <SidebarLink href={`/events/${slug}`} icon={<Activity size={15} />} label="Dashboard" active />
+          <SidebarLink href={`/events/${slug}/results`} icon={<BarChart3 size={15} />} label="Results" />
+          <SidebarLink href={`/events/${slug}/leaderboard`} icon={<Trophy size={15} />} label="Leaderboard" />
+          <SidebarLink href={`/events/${slug}/judge`} icon={<QrCode size={15} />} label="Judge Portal" />
+          <SidebarLink href={`/events/${slug}/config`} icon={<Settings size={15} />} label="Settings" />
         </nav>
 
-        <div className="mt-auto pt-6">
-          <span className="inline-flex items-center rounded-full border border-bg-border bg-bg-overlay px-2.5 py-0.5 text-2xs font-mono text-fg-muted">
-            {completionPct}% complete
-          </span>
-          <Link href={`/events/${slug}/results`} className="btn-primary mt-4 block w-full text-center text-sm">
-            Generate results
+        <div className="mt-auto space-y-3 pt-6">
+          <div>
+            <div className="mb-1 flex items-center justify-between text-xs text-fg-muted">
+              <span>Progress</span>
+              <span className="font-mono text-fg-default">{completionPct}%</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-bg-muted">
+              <div className={`h-full rounded-full transition-all ${completionPct === 100 ? 'bg-semantic-success' : 'bg-fg-default'}`} style={{ width: `${completionPct}%` }} />
+            </div>
+          </div>
+          <Link href={`/events/${slug}/results`} className="btn-primary block w-full text-center text-sm">
+            Results →
           </Link>
         </div>
       </aside>
 
       {/* Main */}
-      <main className="flex-1 p-6 lg:p-10">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-fg-default">Dashboard</h1>
-          <p className="mt-1 text-sm text-fg-muted">Live judging overview for {eventName}</p>
+      <main className="flex-1 overflow-y-auto p-6 lg:p-8">
+        {/* Page header */}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-fg-default">{eventName}</h1>
+            {event?.event?.description && (
+              <p className="mt-1 max-w-xl text-sm text-fg-muted leading-relaxed">{event.event.description}</p>
+            )}
+          </div>
+          <span className={`self-start rounded-full border px-3 py-1 text-xs font-medium sm:self-auto ${statusBadge}`}>
+            {statusLabel}
+          </span>
         </div>
 
-        {/* Stats row */}
-        {status && (
-          <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatCard icon={<Users size={20} />} value={status.totalTeams ?? 0} label="Teams" />
-            <StatCard icon={<Activity size={20} />} value={status.totalJudges ?? 0} label="Judges active" />
-            <StatCard icon={<CheckCircle size={20} />} value={status.completedSubmissions ?? 0} label="Submissions" />
-            <StatCard icon={<BarChart3 size={20} />} value={`${completionPct}%`} label="Completion" />
+        {/* Judging window */}
+        {(event?.event?.judging_opens_at || event?.event?.judging_closes_at) && (
+          <div className="mb-6 flex flex-wrap items-center gap-4 rounded-lg border border-bg-border bg-bg-subtle px-5 py-3">
+            <Clock size={14} className="text-fg-subtle" />
+            {event.event.judging_opens_at && (
+              <span className="text-xs text-fg-muted">Opens: <span className="font-medium text-fg-default">{new Date(event.event.judging_opens_at).toLocaleString()}</span></span>
+            )}
+            {event.event.judging_closes_at && (
+              <span className="text-xs text-fg-muted">Closes: <span className="font-medium text-fg-default">{new Date(event.event.judging_closes_at).toLocaleString()}</span></span>
+            )}
           </div>
         )}
 
-        {/* Event details row */}
-        <div className="mb-6 grid gap-4 lg:grid-cols-3">
-          {/* Description */}
-          <div className="card p-5">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-fg-default">
-              <CalendarRange size={16} className="text-fg-subtle" /> Event Details
-            </h3>
-            {event?.event?.description && (
-              <p className="mt-2 text-sm text-fg-muted leading-relaxed">{event.event.description}</p>
-            )}
-            <div className="mt-3 space-y-1">
-              {event?.event?.timezone && <p className="text-xs text-fg-subtle">Timezone: {event.event.timezone}</p>}
-              {event?.event?.judging_opens_at && <p className="text-xs text-fg-subtle">Opens: {new Date(event.event.judging_opens_at).toLocaleString()}</p>}
-              {event?.event?.judging_closes_at && <p className="text-xs text-fg-subtle">Closes: {new Date(event.event.judging_closes_at).toLocaleString()}</p>}
-              {event?.status && (
-                <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-2xs font-medium ${event.status === 'open' ? 'border-semantic-success/30 text-semantic-success' : event.status === 'not_started' ? 'border-fg-muted/30 text-fg-subtle' : 'border-semantic-error/30 text-semantic-error'}`}>
-                  Status: {event.status}
-                </span>
-              )}
-            </div>
+        {/* Stats */}
+        {status && (
+          <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard icon={<Users size={18} />} value={status.totalTeams ?? 0} label="Teams" />
+            <StatCard icon={<Activity size={18} />} value={status.totalJudges ?? 0} label="Judges" />
+            <StatCard icon={<CheckCircle size={18} />} value={`${completedSubmissions} / ${totalAssignments || '—'}`} label="Submissions" />
+            <StatCard icon={<BarChart3 size={18} />} value={`${completionPct}%`} label="Complete" />
           </div>
+        )}
 
-          {/* Tracks */}
-          <div className="card p-5">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-fg-default">
-              <Tag size={16} className="text-fg-subtle" /> Tracks
-            </h3>
-            {event?.tracks && event.tracks.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {event.tracks.map((track: any, i: number) => (
-                  <span key={track.id ?? track.name ?? i} className="inline-flex items-center rounded-full border border-bg-border bg-bg-muted px-3 py-1 text-xs text-fg-muted">
-                    {track.name}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-2 text-sm text-fg-subtle">No tracks configured.</p>
-            )}
-          </div>
-
-          {/* Criteria */}
-          <div className="card p-5">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-fg-default">
-              <LayoutList size={16} className="text-fg-subtle" /> Criteria
-            </h3>
-            {event?.criteria && event.criteria.length > 0 ? (
-              <div className="mt-3 space-y-1.5">
-                {event.criteria.map((c: any, i: number) => (
-                  <div key={c.id ?? c.name ?? i} className="flex items-center justify-between text-xs">
-                    <span className="text-fg-muted">{c.name}</span>
-                    <span className="text-fg-subtle">{c.scoring_type === 'rubric' ? 'Rubric' : `0–${c.max_score}`} · {(c.weight * 100).toFixed(0)}%</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-2 text-sm text-fg-subtle">No criteria configured.</p>
-            )}
-          </div>
-        </div>
-
-        {/* Heatmap */}
-        <div className="card mb-6 p-6">
-          <h3 className="section-title">Completion Heatmap</h3>
-          <p className="section-subtitle mt-1 mb-4">Judges (rows) × Teams (columns). White = submitted.</p>
-          <Heatmap status={status} />
-        </div>
-
-        {/* Judge Access */}
+        {/* Judge Management */}
         <JudgeAccessPanel
           slug={String(slug)} judges={judges} notOrg={notOrg} copiedPortal={copiedPortal}
           onPinUpdated={reloadJudges}
-          onCopyPortal={() => { navigator.clipboard.writeText(`${window.location.origin}/events/${slug}/judge`); setCopiedPortal(true); setTimeout(() => setCopiedPortal(false), 2000); }}
+          onCopyPortal={() => {
+            navigator.clipboard.writeText(`${getAppBase()}/events/${slug}/judge`);
+            setCopiedPortal(true);
+            setTimeout(() => setCopiedPortal(false), 2000);
+          }}
         />
       </main>
     </div>
@@ -187,9 +152,8 @@ export default function EventDashboard() {
 
 function SidebarLink({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active?: boolean }) {
   return (
-    <Link href={href} className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${active ? 'bg-bg-muted text-fg-default' : 'text-fg-muted hover:bg-bg-muted hover:text-fg-default'}`}>
-      {icon}
-      {label}
+    <Link href={href} className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${active ? 'bg-bg-muted font-medium text-fg-default' : 'text-fg-muted hover:bg-bg-muted hover:text-fg-default'}`}>
+      {icon} {label}
     </Link>
   );
 }
@@ -197,9 +161,9 @@ function SidebarLink({ href, icon, label, active }: { href: string; icon: React.
 function StatCard({ icon, value, label }: { icon: React.ReactNode; value: string | number; label: string }) {
   return (
     <div className="stat-card">
-      <div className="mb-3 text-fg-muted">{icon}</div>
+      <div className="mb-2 text-fg-muted">{icon}</div>
       <div className="font-mono text-2xl font-medium text-fg-default">{value}</div>
-      <div className="text-sm text-fg-muted">{label}</div>
+      <div className="mt-0.5 text-xs text-fg-muted">{label}</div>
     </div>
   );
 }
@@ -212,17 +176,18 @@ function JudgeAccessPanel({ slug, judges, notOrg, copiedPortal, onPinUpdated, on
     <div className="card p-6">
       <div className="mb-5 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h3 className="section-title">Judge Portal</h3>
-          <p className="section-subtitle mt-1">Set a PIN for each judge. They use their email + PIN to sign in.</p>
+          <h3 className="text-base font-semibold text-fg-default">Judges</h3>
+          <p className="mt-0.5 text-sm text-fg-muted">Set a PIN for each judge — they sign in with email + PIN.</p>
         </div>
-        <Link href={portalUrl} target="_blank" rel="noopener noreferrer" className="btn-primary text-sm"><ExternalLink size={14} /> Open Portal</Link>
+        <a href={portalUrl} target="_blank" rel="noopener noreferrer" className="btn-primary whitespace-nowrap text-sm">
+          <ExternalLink size={14} /> Open Portal
+        </a>
       </div>
 
-      <div className="mb-6 flex items-center gap-3 rounded-lg border border-bg-border bg-bg-muted p-4">
-        <code className="flex-1 truncate font-mono text-sm text-fg-muted">{portalUrl}</code>
-        <button onClick={onCopyPortal} className="btn-ghost text-fg-muted text-sm">
-          {copiedPortal ? <CheckCircle size={13} /> : <Copy size={13} />}
-          <span className="ml-1">{copiedPortal ? 'Copied' : 'Copy'}</span>
+      <div className="mb-5 flex items-center gap-2 rounded-lg border border-bg-border bg-bg-muted px-4 py-2.5">
+        <code className="flex-1 truncate font-mono text-xs text-fg-muted">{portalUrl}</code>
+        <button onClick={onCopyPortal} className="flex items-center gap-1 text-xs text-fg-muted hover:text-fg-default">
+          {copiedPortal ? <><CheckCircle size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
         </button>
       </div>
 
@@ -233,7 +198,7 @@ function JudgeAccessPanel({ slug, judges, notOrg, copiedPortal, onPinUpdated, on
           <a href={`/login?next=/events/${slug}`} className="btn-primary text-sm">Sign in</a>
         </div>
       ) : judges.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {judges.map((judge) => (
             <JudgeCard key={judge.id} judge={judge} slug={slug} portalUrl={portalUrl} onPinUpdated={onPinUpdated} />
           ))}
@@ -252,7 +217,7 @@ function JudgeCard({ judge, slug, portalUrl, onPinUpdated }: { judge: any; slug:
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState('');
   const judgeUrl = `${portalUrl}?email=${encodeURIComponent(judge.email)}`;
-  const qr = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&color=ededed&bgcolor=111111&data=${encodeURIComponent(judgeUrl)}`;
+  const qr = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&color=ededed&bgcolor=111111&data=${encodeURIComponent(judgeUrl)}`;
 
   async function savePin() {
     if (pin.length < 4) { setErr('Min 4 characters'); return; }
@@ -271,19 +236,19 @@ function JudgeCard({ judge, slug, portalUrl, onPinUpdated }: { judge: any; slug:
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-bg-border bg-bg-muted p-4">
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
         <div className="overflow-hidden rounded-lg border border-bg-border flex-shrink-0">
-          <img src={qr} alt={`QR for ${judge.name}`} width={80} height={80} className="block" />
+          <img src={qr} alt={`QR for ${judge.name}`} width={70} height={70} className="block" />
         </div>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-fg-default truncate">{judge.name}</p>
-          <p className="text-xs text-fg-subtle truncate">{judge.email}</p>
-          <p className="mt-1 text-xs text-fg-subtle">{judge.tracks?.join(' · ') || 'All tracks'}</p>
-          <div className="mt-1 flex items-center gap-1.5">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-fg-default">{judge.name}</p>
+          <p className="truncate text-xs text-fg-subtle">{judge.email}</p>
+          <p className="mt-0.5 text-xs text-fg-subtle">{judge.tracks?.join(' · ') || 'All tracks'}</p>
+          <div className="mt-1.5 flex items-center gap-2">
             {judge.hasPin
-              ? <><ShieldCheck size={12} className="text-semantic-success" /><span className="text-2xs text-semantic-success">PIN set</span></>
-              : <><KeyRound size={12} className="text-amber-400" /><span className="text-2xs text-amber-400">No PIN</span></>}
-            <span className="text-2xs text-fg-subtle ml-auto">{judge.completion}% done</span>
+              ? <span className="flex items-center gap-1 text-2xs text-semantic-success"><ShieldCheck size={11} /> PIN set</span>
+              : <span className="flex items-center gap-1 text-2xs text-amber-400"><KeyRound size={11} /> No PIN</span>}
+            <span className="ml-auto text-2xs text-fg-subtle">{judge.completion}%</span>
           </div>
         </div>
       </div>
@@ -291,47 +256,22 @@ function JudgeCard({ judge, slug, portalUrl, onPinUpdated }: { judge: any; slug:
       <div className="flex gap-2">
         <div className="relative flex-1">
           <input
-            className="input w-full pr-10 font-mono text-sm tracking-widest"
+            className="input w-full pr-9 font-mono text-sm tracking-widest"
             type={showPin ? 'text' : 'password'}
             placeholder={judge.hasPin ? 'Change PIN…' : 'Set PIN…'}
             value={pin}
             onChange={(e) => setPin(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && savePin()}
           />
-          <button onClick={() => setShowPin(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-subtle">
+          <button onClick={() => setShowPin(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg-muted">
             {showPin ? <EyeOff size={13} /> : <Eye size={13} />}
           </button>
         </div>
-        <button onClick={savePin} disabled={saving || !pin} className="btn-secondary text-xs px-3">
+        <button onClick={savePin} disabled={saving || !pin} className="btn-secondary px-3 text-xs disabled:opacity-40">
           {saved ? <CheckCircle size={13} className="text-semantic-success" /> : saving ? '…' : 'Save'}
         </button>
       </div>
       {err && <p className="text-xs text-semantic-error">{err}</p>}
-    </div>
-  );
-}
-
-function Heatmap({ status }: { status: any }) {
-  if (!status?.heatmap) {
-    return (
-      <div className="grid gap-1" style={{ gridTemplateColumns: 'repeat(8, 32px)' }}>
-        {Array.from({ length: 24 }).map((_, i) => (
-          <div key={i} className="h-8 w-8 rounded-sm bg-bg-muted" />
-        ))}
-      </div>
-    );
-  }
-  return (
-    <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${status.heatmap[0]?.length ?? 8}, 32px)` }}>
-      {status.heatmap.flatMap((row: any[], ri: number) =>
-        row.map((cell: any, ci: number) => (
-          <div
-            key={`${ri}-${ci}`}
-            className={`h-8 w-8 rounded-sm ${cell === 'submitted' ? 'bg-fg-default' : cell === 'in_progress' ? 'border border-fg-default bg-bg-overlay' : 'bg-bg-muted'}`}
-            title={`Judge ${ri + 1} · Team ${ci + 1} · ${cell}`}
-          />
-        ))
-      )}
     </div>
   );
 }
