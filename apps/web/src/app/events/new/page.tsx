@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, ArrowRight, Plus, Trash2, CheckCircle, LayoutDashboard,
-  Send, Copy, ExternalLink, Loader2, AlertTriangle, Upload, Zap, Users, Tag, ListChecks, ClipboardList
+  Copy, ExternalLink, Loader2, AlertTriangle, Upload, Zap, Users, Tag, ListChecks, ClipboardList
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -79,16 +79,15 @@ function toYaml(data: EventData): string {
   const clean = (s: string) => s.replace(/"/g, '\\"');
   const q = (s: string) => `"${clean(s)}"`;
   const rubric = (r: Criterion['rubric'][number]) => `      - score: ${r.score}\n        label: ${q(r.label)}\n        description: ${q(r.description)}`;
-  const opensAt = new Date().toISOString();
-  const closesAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const toISO = (local: string) => local ? new Date(local).toISOString() : new Date().toISOString();
   return `version: "1"
 event:
   name: ${q(data.event.name)}
   slug: ${data.event.slug}
   description: ${q(data.event.description)}
-  timezone: UTC
-  judging_opens_at: "${opensAt}"
-  judging_closes_at: "${closesAt}"
+  timezone: ${data.event.timezone}
+  judging_opens_at: "${toISO(data.event.judging_opens_at)}"
+  judging_closes_at: "${toISO(data.event.judging_closes_at)}"
 tracks:
 ${data.tracks.map(t => `  - id: ${t.id}\n    name: ${q(t.name)}\n    description: ${q(t.description)}`).join('\n')}
 criteria:
@@ -130,8 +129,6 @@ export default function NewEventPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<CreatedEventData | null>(null);
-  const [sending, setSending] = useState<Record<string, boolean>>({});
-  const [sent, setSent] = useState<Record<string, boolean>>({});
   const [copiedUrl, setCopiedUrl] = useState(false);
 
   if (typeof window !== 'undefined' && !localStorage.getItem('token')) {
@@ -191,20 +188,14 @@ export default function NewEventPage() {
     finally { setLoading(false); }
   }
 
-  /* ─── Magic links ─── */
-  async function sendMagicLink(judge: any) {
-    setSending(s => ({ ...s, [judge.email]: true }));
-    try {
-      await fetch(`${API}/auth/magic-link`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: judge.email, eventSlug: created!.slug }) });
-      setSent(s => ({ ...s, [judge.email]: true }));
-    } finally { setSending(s => ({ ...s, [judge.email]: false })); }
-  }
-  async function sendAllMagicLinks() { if (!created) return; for (const j of created.judges) await sendMagicLink(j); }
   function copyPortalUrl() { navigator.clipboard.writeText(`${window.location.origin}/events/${created!.slug}/judge`); setCopiedUrl(true); setTimeout(() => setCopiedUrl(false), 2000); }
 
   /* ─── Success ─── */
   if (created) {
-    const portalUrl = `${window.location.origin}/events/${created.slug}/judge`;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+    const appBase = process.env.NEXT_PUBLIC_APP_URL ||
+      (apiBase.includes('localhost') ? window.location.origin : apiBase.replace('/api/v1', '').replace(':3001', ':3000'));
+    const portalUrl = `${appBase}/events/${created.slug}/judge`;
     return (
       <main className="page-shell px-6 py-10">
         <div className="container-tight">
@@ -218,14 +209,18 @@ export default function NewEventPage() {
               <Link href={`/events/${created.slug}`} className="btn-primary whitespace-nowrap"><LayoutDashboard size={16} /> Dashboard</Link>
             </div>
             <div className="rounded-xl border border-bg-border bg-bg-subtle p-6">
-              <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-                <div><h2 className="text-lg font-semibold text-fg-default">Judge Portal</h2><p className="mt-1 text-sm text-fg-muted">Share this link with judges.</p></div>
-                <button onClick={sendAllMagicLinks} className="btn-secondary whitespace-nowrap"><Send size={14} /> Send All Magic Links</button>
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-fg-default">Judge Portal</h2>
+                <p className="mt-1 text-sm text-fg-muted">Share this URL with judges. Each judge signs in with their email + PIN set from the dashboard.</p>
               </div>
               <div className="mb-6 flex items-center gap-3 rounded-lg border border-bg-border bg-bg-muted p-4">
                 <code className="flex-1 truncate font-mono text-sm text-fg-muted">{portalUrl}</code>
                 <button onClick={copyPortalUrl} className="btn-ghost text-fg-muted">{copiedUrl ? <CheckCircle size={14} /> : <Copy size={14} />}</button>
                 <a href={portalUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost text-fg-muted"><ExternalLink size={14} /></a>
+              </div>
+              <div className="mb-5 flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-xs text-amber-400">
+                <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
+                <span>Set a PIN for each judge from the <Link href={`/events/${created.slug}`} className="underline">Dashboard → Judges</Link> before the event starts. Judges sign in with their email and PIN.</span>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {created.judges.map((judge: any) => {
@@ -233,11 +228,8 @@ export default function NewEventPage() {
                   const qr = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&color=ededed&bgcolor=111111&data=${encodeURIComponent(judgeUrl)}`;
                   return (
                     <div key={judge.email} className="flex flex-col items-center gap-3 rounded-xl border border-bg-border bg-bg-muted p-5">
-                      <div className="overflow-hidden rounded-lg border border-bg-border"><img src={qr} alt={`QR`} width={160} height={160} className="block" /></div>
-                      <div className="text-center"><p className="text-sm font-medium text-fg-default">{judge.name}</p><p className="mt-0.5 text-2xs text-fg-subtle">{judge.tracks?.join(' · ')}</p></div>
-                      <button onClick={() => sendMagicLink(judge)} disabled={sending[judge.email] || sent[judge.email]} className="btn-secondary w-full justify-center text-xs">
-                        {sent[judge.email] ? <><CheckCircle size={13} /> Sent</> : <><Send size={13} /> Send Magic Link</>}
-                      </button>
+                      <div className="overflow-hidden rounded-lg border border-bg-border"><img src={qr} alt="QR" width={160} height={160} className="block" /></div>
+                      <div className="text-center"><p className="text-sm font-medium text-fg-default">{judge.name}</p><p className="mt-0.5 text-2xs text-fg-subtle">{judge.tracks?.join(' · ')}</p><p className="mt-1 text-2xs text-fg-subtle">{judge.email}</p></div>
                     </div>
                   );
                 })}
@@ -288,6 +280,16 @@ export default function NewEventPage() {
                 <div>
                   <label className="mb-1 block text-sm text-fg-muted">Description</label>
                   <textarea className="input w-full resize-none" rows={3} value={data.event.description} onChange={e => setData(d => ({ ...d, event: { ...d.event, description: e.target.value } }))} placeholder="Short description for judges" />
+                </div>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm text-fg-muted">Judging Opens</label>
+                    <input type="datetime-local" className="input w-full" value={data.event.judging_opens_at} onChange={e => setData(d => ({ ...d, event: { ...d.event, judging_opens_at: e.target.value } }))} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm text-fg-muted">Judging Closes</label>
+                    <input type="datetime-local" className="input w-full" value={data.event.judging_closes_at} onChange={e => setData(d => ({ ...d, event: { ...d.event, judging_closes_at: e.target.value } }))} />
+                  </div>
                 </div>
               </div>
             )}
