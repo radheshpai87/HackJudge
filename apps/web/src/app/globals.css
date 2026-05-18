@@ -88,7 +88,7 @@ html.lenis, html.lenis body {
     @apply rounded-xl border border-bg-border bg-bg-subtle shadow-sm shadow-black/20 transition-all duration-200 hover:border-fg-muted/25 hover:shadow-md hover:shadow-black/30;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-fg-default px-5 py-2.5 text-sm font-semibold text-bg-base shadow-sm shadow-black/20 transition-all duration-150 hover:opacity-88 active:scale-[0.98] disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-fg-default px-5 py-2.5 text-sm font-semibold text-bg-base shadow-sm shadow-black/20 transition-all duration-150 hover:opacity-85 active:scale-[0.98] disabled:opacity-40;
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg border border-bg-border bg-bg-muted px-5 py-2.5 text-sm font-medium text-fg-muted shadow-sm shadow-black/10 transition-all duration-150 hover:border-fg-muted/30 hover:text-fg-default active:scale-[0.98];
