@@ -102,8 +102,6 @@ const eventMetaSchema = z.object({
   slug: z.string().regex(/^[a-z0-9-]+$/).describe("URL-safe identifier"),
   description: z.string().optional().describe("Shown on judge welcome screen"),
   timezone: z.string().min(1).describe("IANA timezone string"),
-  judging_opens_at: z.string().datetime({ offset: true }).describe("Judging opens at (ISO8601)"),
-  judging_closes_at: z.string().datetime({ offset: true }).describe("Judging closes at (ISO8601)"),
   logo_url: z.string().url().optional().describe("Logo shown in dashboard + app header"),
 });
 
@@ -120,17 +118,6 @@ export const eventConfigSchema = z
     results: resultsSchema.describe("Results configuration"),
   })
   .superRefine((data, ctx) => {
-    // Validate judging times
-    const opens = new Date(data.event.judging_opens_at);
-    const closes = new Date(data.event.judging_closes_at);
-    if (opens >= closes) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "judging_opens_at must be before judging_closes_at",
-        path: ["event", "judging_closes_at"],
-      });
-    }
-
     // Build track ID set
     const trackIds = new Set(data.tracks.map((t) => t.id));
     trackIds.add("all"); // pseudo-track for global criteria

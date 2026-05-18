@@ -16,7 +16,7 @@ interface Criterion { id: string; name: string; description: string; max_score: 
 interface Team { id: string; name: string; track_id: string | null; leader: string; table_number: string; project_title: string; project_desc: string; }
 interface Judge { id: string; name: string; email: string; tracks: string[]; }
 interface EventData {
-  event: { name: string; slug: string; description: string; timezone: string; judging_opens_at: string; judging_closes_at: string; };
+  event: { name: string; slug: string; description: string; timezone: string; };
   tracks: Track[];
   criteria: Criterion[];
   teams: Team[];
@@ -61,7 +61,7 @@ const CRITERIA_PRESETS = [
 ];
 
 const emptyEvent = (): EventData => ({
-  event: { name: '', slug: '', description: '', timezone: 'America/New_York', judging_opens_at: '', judging_closes_at: '' },
+  event: { name: '', slug: '', description: '', timezone: 'America/New_York' },
   tracks: [{ id: 'general', name: 'General', description: '' }] as Track[],
   criteria: [],
   teams: [],
@@ -74,20 +74,16 @@ const emptyEvent = (): EventData => ({
 /* ─── Helpers ─── */
 function slugify(s: string) { return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40); }
 function uid(prefix: string) { return `${prefix}_${Math.random().toString(36).slice(2, 7)}`; }
-function nowPlus(days: number) { const d = new Date(); d.setDate(d.getDate() + days); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); }
 function toYaml(data: EventData): string {
   const clean = (s: string) => s.replace(/"/g, '\\"');
   const q = (s: string) => `"${clean(s)}"`;
   const rubric = (r: Criterion['rubric'][number]) => `      - score: ${r.score}\n        label: ${q(r.label)}\n        description: ${q(r.description)}`;
-  const toISO = (local: string) => local ? new Date(local).toISOString() : new Date().toISOString();
   return `version: "1"
 event:
   name: ${q(data.event.name)}
   slug: ${data.event.slug}
   description: ${q(data.event.description)}
   timezone: ${data.event.timezone}
-  judging_opens_at: "${toISO(data.event.judging_opens_at)}"
-  judging_closes_at: "${toISO(data.event.judging_closes_at)}"
 tracks:
 ${data.tracks.map(t => `  - id: ${t.id}\n    name: ${q(t.name)}\n    description: ${q(t.description)}`).join('\n')}
 criteria:
@@ -120,12 +116,7 @@ results:
 
 export default function NewEventPage() {
   const [step, setStep] = useState(0);
-  const [data, setData] = useState<EventData>(() => {
-    const d = emptyEvent();
-    d.event.judging_opens_at = nowPlus(1);
-    d.event.judging_closes_at = nowPlus(3);
-    return d;
-  });
+  const [data, setData] = useState<EventData>(emptyEvent);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<CreatedEventData | null>(null);
@@ -286,16 +277,6 @@ export default function NewEventPage() {
                 <div>
                   <label className="mb-1 block text-sm text-fg-muted">Description</label>
                   <textarea className="input w-full resize-none" rows={3} value={data.event.description} onChange={e => setData(d => ({ ...d, event: { ...d.event, description: e.target.value } }))} placeholder="Short description for judges" />
-                </div>
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-sm text-fg-muted">Judging Opens</label>
-                    <input type="datetime-local" className="input w-full" value={data.event.judging_opens_at} onChange={e => setData(d => ({ ...d, event: { ...d.event, judging_opens_at: e.target.value } }))} />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm text-fg-muted">Judging Closes</label>
-                    <input type="datetime-local" className="input w-full" value={data.event.judging_closes_at} onChange={e => setData(d => ({ ...d, event: { ...d.event, judging_closes_at: e.target.value } }))} />
-                  </div>
                 </div>
               </div>
             )}

@@ -7,13 +7,8 @@ import { requireAuth, requireOrganizer, AuthRequest, auditLog } from "../middlew
 
 const router = Router();
 
-function getJudgingStatus(opens: string, closes: string) {
-  const now = new Date();
-  const openTime = new Date(opens);
-  const closeTime = new Date(closes);
-  if (now < openTime) return { status: "not_started", opensIn: openTime.getTime() - now.getTime() };
-  if (now > closeTime) return { status: "closed", closedAt: closeTime.toISOString() };
-  return { status: "open", closesIn: closeTime.getTime() - now.getTime() };
+function getEventStatus() {
+  return { status: "open" };
 }
 
 router.post("/", requireAuth, requireOrganizer, async (req: AuthRequest, res) => {
@@ -167,7 +162,7 @@ router.get("/status-all", requireAuth, requireOrganizer, async (_req: AuthReques
   });
   const list = await Promise.all(events.map(async (e) => {
     const cfg = e.configJson as any;
-    const { status } = getJudgingStatus(cfg.event?.judging_opens_at, cfg.event?.judging_closes_at);
+    const { status } = getEventStatus();
     const [teams, judges, submissions, assignments] = await Promise.all([
       prisma.team.count({ where: { eventId: e.id } }),
       prisma.judge.count({ where: { eventId: e.id } }),
@@ -215,8 +210,8 @@ router.get("/:slug", async (req, res) => {
     return;
   }
   const config = event.configJson as any;
-  const { status, opensIn, closesIn } = getJudgingStatus(config.event.judging_opens_at, config.event.judging_closes_at);
-  res.json(success({ ...config, status, opensIn, closesIn }));
+  const { status } = getEventStatus();
+  res.json(success({ ...config, status }));
 });
 
 router.patch("/:slug/config", requireAuth, requireOrganizer, async (req: AuthRequest, res) => {
@@ -336,7 +331,7 @@ router.get("/:slug/status", async (req, res) => {
     return;
   }
   const config = event.configJson as any;
-  const { status } = getJudgingStatus(config.event.judging_opens_at, config.event.judging_closes_at);
+  const { status } = getEventStatus();
 
   const totalTeams = await prisma.team.count({ where: { eventId: event.id } });
   const totalJudges = await prisma.judge.count({ where: { eventId: event.id } });

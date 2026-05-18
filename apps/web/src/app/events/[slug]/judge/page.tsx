@@ -11,7 +11,7 @@ interface Team { id: string; name: string; track: string | null; trackId: string
 interface Criterion { id: string; name: string; description?: string; maxScore: number; weight: number; scoringType: 'numeric' | 'rubric'; rubric: Array<{ score: number; label: string; description: string }> | null; trackId: string | null; }
 interface JudgeInfo { id: string; name: string; email: string; }
 interface JudgeState { judge: JudgeInfo; assignments: Team[]; completedTeamIds: string[]; progress: { totalAssigned: number; completed: number; percent: number }; }
-interface EventMeta { name: string; description: string; judging_opens_at: string; judging_closes_at: string; }
+interface EventMeta { name: string; description: string; }
 interface EventConfig { event: EventMeta; tracks: Array<{ id: string; name: string }>; }
 
 async function apiFetch(path: string, token?: string, opts: RequestInit = {}) {

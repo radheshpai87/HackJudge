@@ -7,4 +7,3 @@ build/
 *.log
 .DS_Store
 tmp/
-hackjudge-form-builder-prompt.md

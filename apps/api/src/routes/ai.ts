@@ -11,7 +11,7 @@ const SYSTEM_PROMPT = `You are an expert hackathon organizer. Generate a valid H
 
 Required top-level fields:
 - version: "1"
-- event: { name, slug (lowercase alphanumeric-hyphens), description, timezone (IANA e.g. "America/New_York"), judging_opens_at, judging_closes_at (ISO 8601 with offset, e.g. 2026-06-15T09:00:00Z) }
+- event: { name, slug (lowercase alphanumeric-hyphens), description, timezone (IANA e.g. "America/New_York") }
 - tracks: array of { id (lowercase alphanumeric-underscore), name, description }
 - criteria: array of { id, name, description, max_score (int), weight (positive), track_id (null or existing track id), scoring_type ("numeric" or "rubric"), rubric (array of {score, label, description} — REQUIRED when scoring_type is "rubric") }
 - teams: array of { id, name, track_id (null or existing track id), members (array of strings), table_number (string, optional) }
@@ -26,9 +26,7 @@ CRITICAL RULES:
 3. Event slug: ONLY lowercase letters, digits, hyphens
 4. WEIGHTS MUST SUM TO 1.0 per track_id: group ALL criteria by track_id (null = "all"). The weight values in each group must add to exactly 1.0. Example: if track "ai_track" has 2 criteria, weights 0.5 and 0.5. If "all" has 4 criteria, weights 0.25, 0.25, 0.25, 0.25.
 5. Rubric criteria MUST have rubric array with {score (int), label (string), description (string)}.
-6. Dates MUST have timezone offset (e.g. 2026-06-15T09:00:00Z).
-7. judging_closes_at MUST be AFTER judging_opens_at.
-8. Use assignment.mode = "free" to avoid complex validation. If you use "assigned", every assigned_teams entry must reference a judge ID, and each team_id must be a valid team. The judge must cover that team's track_id in their tracks array.
+6. Use assignment.mode = "free" to avoid complex validation. If you use "assigned", every assigned_teams entry must reference a judge ID, and each team_id must be a valid team. The judge must cover that team's track_id in their tracks array.
 
 Output ONLY the raw YAML. No markdown fences, no explanations.`;
 

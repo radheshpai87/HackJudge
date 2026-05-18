@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Activity, BarChart3, Users, CheckCircle, QrCode, Copy, ExternalLink, Clock, KeyRound, ShieldCheck, Eye, EyeOff, Trophy, Settings } from 'lucide-react';
+import { Activity, BarChart3, Users, CheckCircle, QrCode, Copy, ExternalLink, KeyRound, ShieldCheck, Eye, EyeOff, Trophy, Settings } from 'lucide-react';
 import Link from 'next/link';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
@@ -123,19 +123,6 @@ export default function EventDashboard() {
             {statusLabel}
           </span>
         </div>
-
-        {/* Judging window */}
-        {(event?.event?.judging_opens_at || event?.event?.judging_closes_at) && (
-          <div className="mb-6 flex flex-wrap items-center gap-4 rounded-lg border border-bg-border bg-bg-subtle px-5 py-3">
-            <Clock size={14} className="text-fg-subtle" />
-            {event.event.judging_opens_at && (
-              <span className="text-xs text-fg-muted">Opens: <span className="font-medium text-fg-default">{new Date(event.event.judging_opens_at).toLocaleString()}</span></span>
-            )}
-            {event.event.judging_closes_at && (
-              <span className="text-xs text-fg-muted">Closes: <span className="font-medium text-fg-default">{new Date(event.event.judging_closes_at).toLocaleString()}</span></span>
-            )}
-          </div>
-        )}
 
         {/* Stats */}
         {status && (

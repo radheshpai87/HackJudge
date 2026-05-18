@@ -23,8 +23,6 @@ event:
   slug: "${slug}"
   description: "An amazing hackathon"
   timezone: "UTC"
-  judging_opens_at: "2025-01-01T09:00:00Z"
-  judging_closes_at: "2025-01-01T18:00:00Z"
 
 tracks:
   - id: "overall"

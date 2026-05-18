@@ -12,21 +12,9 @@ router.put("/:slug/scores", requireAuth, requireJudge, async (req: AuthRequest, 
     res.status(404).json(error("EVENT_NOT_FOUND", "Event not found"));
     return;
   }
-  // Enforce judging window
+  // Check lock_results_after
   const config = event.configJson as any;
   const now = new Date();
-  const opens = new Date(config.event.judging_opens_at);
-  const closes = new Date(config.event.judging_closes_at);
-  if (now < opens) {
-    res.status(403).json(error("JUDGING_NOT_OPEN", "Judging has not started yet"));
-    return;
-  }
-  if (now > closes) {
-    res.status(403).json(error("JUDGING_CLOSED", "Judging has closed"));
-    return;
-  }
-
-  // Check lock_results_after
   const lockAfter = config.moderation?.lock_results_after ? new Date(config.moderation.lock_results_after) : null;
   if (lockAfter && now > lockAfter) {
     res.status(403).json(error("JUDGING_LOCKED", "Scores are locked"));
