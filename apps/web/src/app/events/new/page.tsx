@@ -300,6 +300,7 @@ export default function NewEventPage() {
             {step === 1 && (
               <div className="space-y-4">
                 <p className="text-sm text-fg-muted">Add tracks or categories for your hackathon. Every event needs at least one.</p>
+                <BulkImportTracks onImport={tracks => setData(d => ({ ...d, tracks: [...d.tracks, ...tracks] }))} />
                 {data.tracks.map((t, i) => (
                   <div key={t.id} className="card p-4">
                     <div className="mb-3 flex items-center justify-between">
@@ -608,6 +609,56 @@ export default function NewEventPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+/* ─── Bulk Import: Tracks ─── */
+function BulkImportTracks({ onImport }: { onImport: (tracks: Track[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [csv, setCsv] = useState('');
+  const [preview, setPreview] = useState<Track[]>([]);
+
+  function parseCsv(text: string) {
+    const lines = text.trim().split('\n').filter(Boolean);
+    const parsed: Track[] = lines.map(line => {
+      const [name = '', description = ''] = line.split(',').map(s => s.trim());
+      const id = slugify(name).replace(/-/g, '_') || uid('track');
+      return { id, name, description };
+    }).filter(t => t.name);
+    setPreview(parsed);
+  }
+
+  if (!open) return (
+    <button type="button" onClick={() => setOpen(true)} className="btn-ghost w-full justify-center text-xs text-fg-subtle">
+      <Upload size={14} /> Bulk import via CSV paste
+    </button>
+  );
+
+  return (
+    <div className="card p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-sm font-medium text-fg-default">Bulk Import Tracks</p>
+        <button type="button" onClick={() => { setOpen(false); setCsv(''); setPreview([]); }} className="text-xs text-fg-muted">Cancel</button>
+      </div>
+      <p className="mb-3 text-xs text-fg-subtle">One track per line: <code className="font-mono">Track Name, Description (optional)</code></p>
+      <textarea
+        className="input mb-3 h-24 w-full resize-none font-mono text-xs"
+        placeholder={"AI Track, Projects using machine learning\nWeb Track, Frontend & backend projects"}
+        value={csv}
+        onChange={e => { setCsv(e.target.value); parseCsv(e.target.value); }}
+      />
+      {preview.length > 0 && (
+        <div className="mb-3">
+          <p className="mb-1 text-xs text-fg-muted">{preview.length} track{preview.length !== 1 ? 's' : ''} detected:</p>
+          <div className="flex flex-wrap gap-1">
+            {preview.map(t => <span key={t.id} className="rounded-full bg-bg-muted px-2 py-0.5 text-xs text-fg-muted">{t.name}</span>)}
+          </div>
+        </div>
+      )}
+      <button type="button" disabled={preview.length === 0} onClick={() => { onImport(preview); setOpen(false); setCsv(''); setPreview([]); }} className="btn-primary w-full justify-center text-sm disabled:opacity-40">
+        Import {preview.length > 0 ? preview.length : ''} Tracks
+      </button>
+    </div>
   );
 }
 
