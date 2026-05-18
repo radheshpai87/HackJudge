@@ -132,8 +132,11 @@ router.post("/", requireAuth, requireOrganizer, async (req: AuthRequest, res) =>
     });
     if (Array.isArray(j.tracks)) {
       for (const tid of j.tracks) {
+        if (tid === 'all') continue;
+        const resolvedTrackId = trackMap.get(tid);
+        if (!resolvedTrackId) continue;
         await prisma.judgeTrack.create({
-          data: { judgeId: created.id, trackId: trackMap.get(tid)! },
+          data: { judgeId: created.id, trackId: resolvedTrackId },
         });
       }
     }
@@ -155,6 +158,34 @@ router.post("/", requireAuth, requireOrganizer, async (req: AuthRequest, res) =>
 
   await auditLog(event.id, req.user!.id, "organizer", "event_created", { slug: event.slug, teams: config.teams.length, judges: config.judges.length });
   res.status(201).json(success({ slug: event.slug, id: event.id }));
+});
+
+router.get("/status-all", requireAuth, requireOrganizer, async (_req: AuthRequest, res) => {
+  const events = await prisma.event.findMany({
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, slug: true, configJson: true, status: true, createdAt: true },
+  });
+  const list = await Promise.all(events.map(async (e) => {
+    const cfg = e.configJson as any;
+    const { status } = getJudgingStatus(cfg.event?.judging_opens_at, cfg.event?.judging_closes_at);
+    const [teams, judges, submissions, assignments] = await Promise.all([
+      prisma.team.count({ where: { eventId: e.id } }),
+      prisma.judge.count({ where: { eventId: e.id } }),
+      prisma.scoreSubmission.count({ where: { eventId: e.id } }),
+      prisma.assignment.count({ where: { team: { eventId: e.id } } }),
+    ]);
+    return {
+      slug: e.slug,
+      name: cfg?.event?.name ?? e.slug,
+      status,
+      teams,
+      judges,
+      completedSubmissions: submissions,
+      totalAssignments: assignments,
+      createdAt: e.createdAt,
+    };
+  }));
+  res.json(success(list));
 });
 
 router.get("/", async (_req, res) => {
@@ -186,6 +217,25 @@ router.get("/:slug", async (req, res) => {
   const config = event.configJson as any;
   const { status, opensIn, closesIn } = getJudgingStatus(config.event.judging_opens_at, config.event.judging_closes_at);
   res.json(success({ ...config, status, opensIn, closesIn }));
+});
+
+router.patch("/:slug/config", requireAuth, requireOrganizer, async (req: AuthRequest, res) => {
+  const event = await prisma.event.findUnique({ where: { slug: req.params.slug } });
+  if (!event) { res.status(404).json(error("EVENT_NOT_FOUND", "Event not found")); return; }
+  const schema = z.object({
+    name: z.string().min(1).optional(),
+    description: z.string().optional(),
+    timezone: z.string().optional(),
+    judging_opens_at: z.string().optional(),
+    judging_closes_at: z.string().optional(),
+  });
+  const parse = schema.safeParse(req.body);
+  if (!parse.success) { res.status(400).json(error("VALIDATION_ERROR", "Invalid request")); return; }
+  const config = event.configJson as any;
+  const updatedConfig = { ...config, event: { ...config.event, ...parse.data } };
+  await prisma.event.update({ where: { slug: req.params.slug }, data: { configJson: updatedConfig } });
+  await auditLog(event.id, req.user!.id, "organizer", "event_config_updated", parse.data);
+  res.json(success({ updated: true }));
 });
 
 router.get("/:slug/status", async (req, res) => {
