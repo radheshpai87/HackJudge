@@ -35,8 +35,13 @@ export default function HomePage() {
     const token = localStorage.getItem('token');
     if (!token) { window.location.href = '/login?next=/home'; return; }
     fetch(`${API}/events/status-all`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
-      .then((d) => {
+      .then(async (r) => {
+        if (r.status === 401 || r.status === 403) {
+          localStorage.removeItem('token');
+          window.location.href = '/login?next=/home';
+          return;
+        }
+        const d = await r.json();
         if (d.success) { setEvents(d.data); }
         else { setErr(d.error?.message ?? 'Failed to load'); }
       })
