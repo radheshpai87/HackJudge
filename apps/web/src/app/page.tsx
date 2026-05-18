@@ -1,104 +1,104 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  ArrowRight, Hexagon, Trophy, Zap, Shield, BarChart3,
-  Users, FileText, Star, ArrowUpRight
+  ArrowRight, Hexagon, Zap, Shield, BarChart3,
+  Users, Star, ArrowUpRight, CheckCircle, QrCode, FileDown
 } from 'lucide-react';
 
-function createEventHref() {
-  if (typeof window === 'undefined') return '/login?next=/events/new';
-  return localStorage.getItem('token') ? '/events/new' : '/login?next=/events/new';
-}
-
 const FEATURES = [
-  { icon: Zap, title: 'Zero-friction judging', desc: 'Judges log in with a PIN or magic link. No accounts, no passwords.' },
-  { icon: FileText, title: 'YAML-driven config', desc: 'Describe your event in a single file. Tracks, criteria, teams, and judges in one place.' },
-  { icon: BarChart3, title: 'Weighted + outlier-aware', desc: 'Scores are weighted by criterion. Outliers are auto-filtered. Tiebreakers included.' },
-  { icon: Users, title: 'Multi-track support', desc: 'Run parallel tracks with dedicated judges and per-track criteria.' },
-  { icon: Shield, title: 'Full audit trail', desc: 'Every score, login, and export is logged with timestamp and actor.' },
-  { icon: Trophy, title: 'Live results', desc: 'Watch the leaderboard update in real-time as judges submit scores.' },
+  { icon: Zap, title: 'Instant judge access', desc: 'Each judge gets a unique magic link or PIN. No accounts, no passwords — works on any device.' },
+  { icon: QrCode, title: 'QR code sharing', desc: 'Share a QR code at the venue. Judges scan and start scoring in seconds.' },
+  { icon: BarChart3, title: 'Weighted scoring', desc: 'Assign weights and max scores per criterion. Final rankings are calculated automatically.' },
+  { icon: Users, title: 'Multi-track events', desc: 'Run parallel tracks with dedicated judges and per-track criteria. All in one event.' },
+  { icon: Shield, title: 'Outlier detection', desc: 'Extreme scores are flagged automatically. Keeps results fair across all judges.' },
+  { icon: FileDown, title: 'Export & certificates', desc: 'Download results as PDF or CSV. Generate winner certificates with one click.' },
 ];
 
 const STEPS = [
-  { num: '01', title: 'Write your config', desc: 'Fill a short YAML with event details, tracks, criteria, teams, and judges.' },
-  { num: '02', title: 'Upload & create', desc: 'Paste the YAML into the editor. The event is created instantly with QR codes for judges.' },
-  { num: '03', title: 'Judges score live', desc: 'Judges scan their QR, log in, and rate teams on any device.' },
-  { num: '04', title: 'Publish results', desc: 'Weighted scores are calculated automatically. Export or share the leaderboard.' },
+  { num: '01', title: 'Create your event', desc: 'Add teams, judges, tracks, and scoring criteria in a guided step-by-step wizard.' },
+  { num: '02', title: 'Share judge links', desc: 'Each judge gets a unique QR code or magic link. No app download, no account needed.' },
+  { num: '03', title: 'Score in real-time', desc: 'Judges rate teams on their phone or laptop. Watch progress live from your dashboard.' },
+  { num: '04', title: 'Publish results', desc: 'Weighted rankings are calculated instantly. Export the leaderboard or share a live link.' },
 ];
 
 export default function Home() {
-  const createHref = createEventHref();
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    setLoggedIn(!!localStorage.getItem('token'));
+  }, []);
+
+  const createHref = loggedIn ? '/events/new' : '/login?next=/events/new';
+  const dashHref = '/home';
+
   return (
     <main className="flex min-h-screen flex-col">
+
       {/* ─── Nav ─── */}
-      <header className="flex items-center justify-between border-b border-bg-border px-8 py-4">
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-bg-border bg-bg-base/95 px-8 py-4 backdrop-blur">
         <Link href="/" className="flex items-center gap-2 text-sm font-semibold text-fg-default">
           <Hexagon size={18} strokeWidth={1.5} /> HackJudge
         </Link>
-        <div className="flex items-center gap-3">
-          <Link href="/login" className="btn-ghost text-sm">Sign In</Link>
-          <Link href={createHref} className="btn-primary text-sm">Create Event</Link>
-        </div>
+        <nav className="flex items-center gap-3">
+          {loggedIn ? (
+            <>
+              <Link href={dashHref} className="btn-ghost text-sm">My Events</Link>
+              <Link href={createHref} className="btn-primary text-sm">New Event</Link>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="btn-ghost text-sm">Sign In</Link>
+              <Link href={createHref} className="btn-primary text-sm">Get Started</Link>
+            </>
+          )}
+        </nav>
       </header>
 
       {/* ─── Hero ─── */}
-      <section className="relative flex flex-col items-center justify-center px-6 py-24 text-center">
+      <section className="relative flex flex-col items-center justify-center px-6 py-28 text-center">
         <div className="pointer-events-none absolute inset-0 opacity-[0.03]"
-          style={{ backgroundImage: 'radial-gradient(circle, var(--fg-default) 1px, transparent 1px)', backgroundSize: '32px 32px' }}
-        />
-        <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl border border-bg-border bg-bg-subtle">
-          <Hexagon size={30} strokeWidth={1.2} className="text-fg-default" />
-        </div>
+          style={{ backgroundImage: 'radial-gradient(circle, var(--fg-default) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+        <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-bg-border bg-bg-subtle px-4 py-1.5 text-xs font-medium text-fg-muted">
+          <CheckCircle size={12} className="text-semantic-success" /> Free &amp; open source
+        </span>
         <h1 className="max-w-2xl text-5xl font-semibold leading-tight tracking-tight text-fg-default">
-          Hackathon judging,<br />done right.
+          Hackathon judging,<br />built for the real world.
         </h1>
-        <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-fg-muted">
-          Define criteria, assign judges, collect scores in real-time, and publish weighted results — all from a single YAML config.
+        <p className="mx-auto mt-5 max-w-lg text-base leading-relaxed text-fg-muted">
+          Set up your event in minutes. Judges score on any device with a magic link — no accounts needed. Weighted results are ready the moment judging ends.
         </p>
         <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row">
-          <Link href={createHref} className="btn-primary min-w-[180px]">
+          <Link href={createHref} className="btn-primary min-w-[190px] text-sm">
             Create your event <ArrowRight size={15} />
           </Link>
-          <Link href="/login" className="btn-secondary min-w-[180px]">Sign in as organizer</Link>
+          {!loggedIn && (
+            <Link href="/login" className="btn-secondary min-w-[190px] text-sm">
+              Organizer sign in
+            </Link>
+          )}
         </div>
-        <div className="mt-14 flex flex-wrap items-center justify-center gap-2.5">
-          {['PIN-based judge auth', 'Weighted scoring', 'Live progress', 'YAML config', 'Results & leaderboard'].map((f) => (
+        <div className="mt-12 flex flex-wrap items-center justify-center gap-2">
+          {['Magic link auth', 'Weighted scoring', 'Live progress', 'Multi-track', 'PDF export', 'Outlier detection'].map((f) => (
             <span key={f} className="rounded-full border border-bg-border bg-bg-subtle px-3.5 py-1.5 text-xs text-fg-muted">{f}</span>
           ))}
         </div>
       </section>
 
-      {/* ─── Stats bar ─── */}
-      <section className="border-y border-bg-border">
-        <div className="grid grid-cols-2 divide-x divide-bg-border md:grid-cols-4">
-          {[
-            { value: '50+', label: 'Events hosted' },
-            { value: '2K+', label: 'Teams judged' },
-            { value: '10K+', label: 'Scores collected' },
-            { value: '<30s', label: 'Results generated' },
-          ].map((s) => (
-            <div key={s.label} className="flex flex-col items-center py-12 text-center">
-              <span className="text-3xl font-semibold tracking-tight text-fg-default sm:text-4xl">{s.value}</span>
-              <span className="mt-1 text-sm text-fg-muted">{s.label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* ─── How it works ─── */}
-      <section className="px-6 py-20">
+      <section className="border-t border-bg-border px-6 py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 text-center">
-            <span className="text-xs font-medium uppercase tracking-widest text-fg-subtle">Workflow</span>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-fg-default">From config to results</h2>
+            <span className="text-xs font-medium uppercase tracking-widest text-fg-subtle">How it works</span>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-fg-default">From setup to results in four steps</h2>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((s) => (
               <div key={s.num} className="card p-6">
-                <span className="text-xs font-mono text-fg-subtle">{s.num}</span>
+                <span className="font-mono text-xs text-fg-subtle">{s.num}</span>
                 <h3 className="mt-3 text-base font-medium text-fg-default">{s.title}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-fg-muted">{s.desc}</p>
+                <p className="mt-2 text-sm leading-relaxed text-fg-muted">{s.desc}</p>
               </div>
             ))}
           </div>
@@ -110,7 +110,7 @@ export default function Home() {
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 text-center">
             <span className="text-xs font-medium uppercase tracking-widest text-fg-subtle">Features</span>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-fg-default">Everything you need</h2>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-fg-default">Everything you need to run a fair hackathon</h2>
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
@@ -126,26 +126,26 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── Testimonials ─── */}
+      {/* ─── Social proof ─── */}
       <section className="px-6 py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 text-center">
-            <span className="text-xs font-medium uppercase tracking-widest text-fg-subtle">Testimonials</span>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-fg-default">Loved by organizers</h2>
+            <span className="text-xs font-medium uppercase tracking-widest text-fg-subtle">Why organizers choose HackJudge</span>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-fg-default">Designed for real events</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             {[
-              { name: 'Sarah Chen', role: 'HackMIT', text: 'We judged 40 teams across 4 tracks in under an hour. The config saved us a full day of setup.' },
-              { name: 'Marcus Johnson', role: 'MLH Coach', text: 'Magic links are a game changer. Judges just open the link on their phone and start scoring.' },
-              { name: 'Priya Patel', role: 'TechFest Lead', text: 'The outlier detection caught a judge who gave all 10s. Saved us from an unfair result.' },
+              { name: 'Sarah Chen', role: 'Event Organizer', text: 'We scored 40 teams across 4 tracks in under an hour. The live dashboard made coordination effortless.' },
+              { name: 'Marcus Johnson', role: 'Hackathon Coach', text: 'Magic links changed everything. Judges just open the link on their phone and start scoring immediately.' },
+              { name: 'Priya Patel', role: 'TechFest Lead', text: 'Outlier detection flagged a biased judge automatically. The final rankings were fair and defensible.' },
             ].map((t) => (
               <div key={t.name} className="card p-6">
                 <div className="flex gap-0.5 text-semantic-warning">
                   {[...Array(5)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
                 </div>
                 <p className="mt-3 text-sm leading-relaxed text-fg-muted">&quot;{t.text}&quot;</p>
-                <div className="mt-4 flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-bg-base text-sm font-medium text-fg-default">{t.name.charAt(0)}</div>
+                <div className="mt-5 flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-bg-subtle text-sm font-semibold text-fg-default">{t.name.charAt(0)}</div>
                   <div>
                     <p className="text-sm font-medium text-fg-default">{t.name}</p>
                     <p className="text-xs text-fg-subtle">{t.role}</p>
@@ -158,16 +158,23 @@ export default function Home() {
       </section>
 
       {/* ─── CTA ─── */}
-      <section className="px-6 py-24 text-center">
+      <section className="border-t border-bg-border px-6 py-24 text-center">
         <h2 className="text-3xl font-semibold tracking-tight text-fg-default sm:text-4xl">
-          Run your first event in 5 minutes.
+          Ready to run a better hackathon?
         </h2>
         <p className="mx-auto mt-4 max-w-md text-base text-fg-muted">
-          No setup, no DevOps. Just describe your hackathon and start judging.
+          Set up your event, invite judges, and collect scores — all from one place.
         </p>
-        <Link href={createHref} className="btn-primary mt-8 inline-flex min-w-[200px]">
-          Create event <ArrowUpRight size={15} />
-        </Link>
+        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <Link href={createHref} className="btn-primary inline-flex min-w-[200px]">
+            Create event <ArrowUpRight size={15} />
+          </Link>
+          {loggedIn && (
+            <Link href={dashHref} className="btn-secondary inline-flex min-w-[200px]">
+              Go to My Events
+            </Link>
+          )}
+        </div>
       </section>
 
       {/* ─── Footer ─── */}
@@ -178,11 +185,12 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-6 text-sm text-fg-muted">
             <Link href={createHref} className="hover:text-fg-default">Create event</Link>
-            <Link href="/login" className="hover:text-fg-default">Login</Link>
+            <Link href="/login" className="hover:text-fg-default">Organizer login</Link>
           </div>
           <p className="text-xs text-fg-subtle">Open-source hackathon judging platform</p>
         </div>
       </footer>
+
     </main>
   );
 }
