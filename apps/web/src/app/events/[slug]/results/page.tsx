@@ -64,7 +64,7 @@ export default function ResultsPage() {
         <h2 className="text-lg font-semibold text-fg-default">No results yet</h2>
         <p className="mt-1 text-sm text-fg-muted">Generate results to see the leaderboard.</p>
       </div>
-      <button onClick={generate} disabled={generating} className="btn-primary">
+      <button type="button" onClick={generate} disabled={generating} className="btn-primary">
         {generating ? <><RefreshCw size={14} className="animate-spin" /> Generating…</> : 'Generate Results'}
       </button>
       <Link href={`/events/${slug}`} className="text-sm text-fg-subtle hover:text-fg-muted">← Back to dashboard</Link>
@@ -144,7 +144,7 @@ export default function ResultsPage() {
             <span className="text-sm">{isLocked ? 'Results locked' : `Generated ${results.generatedAt ? new Date(results.generatedAt).toLocaleDateString() : 'recently'}`}</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={generate} disabled={generating} className="btn-secondary text-sm">
+            <button type="button" onClick={generate} disabled={generating} className="btn-secondary text-sm">
               {generating ? <><RefreshCw size={13} className="animate-spin" /> Regenerating…</> : <><RefreshCw size={13} /> Regenerate</>}
             </button>
             <a href={`${API}/events/${slug}/results/export/pdf?token=${getToken()}`} className="btn-secondary text-sm"><FileText size={14} /> Export PDF</a>

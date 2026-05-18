@@ -146,7 +146,7 @@ export default function Navbar() {
               >
                 <Plus size={12} strokeWidth={2.5} /> New Event
               </Link>
-              <button
+              <button type="button"
                 onClick={signOut}
                 title="Sign out"
                 className="ml-0.5 flex h-8 w-8 items-center justify-center rounded-xl text-fg-subtle transition-all hover:bg-bg-muted hover:text-fg-muted active:scale-[0.97]"
@@ -191,7 +191,7 @@ export default function Navbar() {
           </div>
           <span className="text-sm font-semibold tracking-tight text-fg-default">HackJudge</span>
         </Link>
-        <button
+        <button type="button"
           onClick={() => setOpen(!open)}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-fg-muted transition-colors hover:text-fg-default"
           style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
@@ -241,7 +241,7 @@ export default function Navbar() {
                     <MobileLink href="/home" icon={<LayoutDashboard size={15} />} onClick={() => setOpen(false)}>My Events</MobileLink>
                     <MobileLink href="/events/new" icon={<Plus size={15} />} onClick={() => setOpen(false)}>New Event</MobileLink>
                     <div className="mx-3 my-1 h-px bg-bg-border/60" />
-                    <button
+                    <button type="button"
                       onClick={signOut}
                       className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-semantic-error/70 transition-colors hover:bg-semantic-error/10 hover:text-semantic-error"
                     >

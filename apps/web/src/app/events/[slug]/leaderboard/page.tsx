@@ -82,14 +82,14 @@ export default function LeaderboardPage() {
         {/* Track filter */}
         {tracks.length > 0 && (
           <div className="mb-6 flex flex-wrap gap-2">
-            <button
+            <button type="button"
               onClick={() => setTrackFilter('all')}
               className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${trackFilter === 'all' ? 'border-fg-default bg-fg-default text-bg-base' : 'border-bg-border text-fg-muted hover:border-fg-muted'}`}
             >
               All Tracks
             </button>
             {tracks.map((track) => (
-              <button
+              <button type="button"
                 key={track}
                 onClick={() => setTrackFilter(track)}
                 className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${trackFilter === track ? 'border-fg-default bg-fg-default text-bg-base' : 'border-bg-border text-fg-muted hover:border-fg-muted'}`}

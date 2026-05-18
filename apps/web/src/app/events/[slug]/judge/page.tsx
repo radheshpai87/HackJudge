@@ -132,7 +132,7 @@ function AuthScreen({ slug, eventConfig, prefilledEmail, onSignedIn }: { slug: s
           </div>
         </div>
         {err && <p className="mt-3 rounded-md bg-semantic-error/10 px-3 py-2 text-sm text-semantic-error">{err}</p>}
-        <button className="btn-primary mt-5 w-full py-3" onClick={login} disabled={loading}>
+        <button type="button" className="btn-primary mt-5 w-full py-3" onClick={login} disabled={loading}>
           {loading ? 'Signing in…' : 'Sign In →'}
         </button>
       </div>
@@ -159,7 +159,7 @@ function HomeScreen({ judgeState, eventConfig, onSelectTeam, onSignOut }: { judg
             <p className="text-xs text-fg-subtle leading-tight">{eventConfig?.event?.name ?? 'Judging Portal'}</p>
           </div>
         </div>
-        <button onClick={onSignOut} className="flex items-center gap-1.5 text-xs text-fg-subtle hover:text-fg-muted">
+        <button type="button" onClick={onSignOut} className="flex items-center gap-1.5 text-xs text-fg-subtle hover:text-fg-muted">
           <LogOut size={13} /> Sign out
         </button>
       </div>
@@ -188,7 +188,7 @@ function HomeScreen({ judgeState, eventConfig, onSelectTeam, onSignOut }: { judg
             <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-fg-subtle">To Score</p>
             <div className="flex flex-col gap-2">
               {pending.map((team) => (
-                <button key={team.id} onClick={() => onSelectTeam(team)}
+                <button type="button" key={team.id} onClick={() => onSelectTeam(team)}
                   className="flex items-center justify-between rounded-xl border border-bg-border bg-bg-subtle p-4 text-left transition-all hover:border-fg-muted/30 hover:bg-bg-muted active:scale-[0.99]">
                   <div>
                     <p className="text-[15px] font-semibold text-fg-default">{team.name}</p>
@@ -210,7 +210,7 @@ function HomeScreen({ judgeState, eventConfig, onSelectTeam, onSignOut }: { judg
             <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Submitted — tap to edit</p>
             <div className="flex flex-col gap-2">
               {done.map((team) => (
-                <button key={team.id} onClick={() => onSelectTeam(team)}
+                <button type="button" key={team.id} onClick={() => onSelectTeam(team)}
                   className="flex items-center justify-between rounded-xl border border-semantic-success/20 bg-semantic-success/5 p-4 text-left transition-all hover:border-semantic-success/40 hover:bg-semantic-success/10 active:scale-[0.99]">
                   <div className="flex items-center gap-3">
                     <Check size={15} className="flex-shrink-0 text-semantic-success" />
@@ -301,7 +301,7 @@ function ScoringScreen({ token, slug, team, eventConfig, onSubmitted, onBack }: 
     <div className="pb-20">
       {/* Header */}
       <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-bg-border bg-bg-base px-4 pt-12 pb-4">
-        <button onClick={onBack} className="flex h-8 w-8 items-center justify-center rounded-lg border border-bg-border bg-bg-subtle text-fg-muted hover:bg-bg-muted">
+        <button type="button" onClick={onBack} className="flex h-8 w-8 items-center justify-center rounded-lg border border-bg-border bg-bg-subtle text-fg-muted hover:bg-bg-muted">
           <ArrowLeft size={16} />
         </button>
         <div className="min-w-0 flex-1">
@@ -350,7 +350,7 @@ function ScoringScreen({ token, slug, team, eventConfig, onSubmitted, onBack }: 
                   {crit.rubric.map((level) => {
                     const sel = scores[crit.id] === level.score;
                     return (
-                      <button key={level.score} onClick={() => setScores((s) => ({ ...s, [crit.id]: level.score }))}
+                      <button type="button" key={level.score} onClick={() => setScores((s) => ({ ...s, [crit.id]: level.score }))}
                         className={`rounded-lg border p-3 text-left transition-all ${sel ? 'border-semantic-success bg-semantic-success/5' : 'border-bg-border bg-bg-muted hover:border-fg-muted/30'}`}>
                         <div className="mb-1 flex items-center gap-2.5">
                           <span className={`w-7 font-mono text-base font-bold ${sel ? 'text-semantic-success' : 'text-fg-subtle'}`}>{level.score}</span>
@@ -367,7 +367,7 @@ function ScoringScreen({ token, slug, team, eventConfig, onSubmitted, onBack }: 
                   {Array.from({ length: crit.maxScore }, (_, i) => i + 1).map((n) => {
                     const sel = scores[crit.id] === n;
                     return (
-                      <button key={n} onClick={() => setScores((s) => ({ ...s, [crit.id]: n }))}
+                      <button type="button" key={n} onClick={() => setScores((s) => ({ ...s, [crit.id]: n }))}
                         className={`flex h-11 w-11 items-center justify-center rounded-lg border text-sm font-semibold transition-all ${sel ? 'border-fg-default bg-fg-default text-bg-base' : 'border-bg-border bg-bg-muted text-fg-muted hover:border-fg-muted'}`}>
                         {n}
                       </button>
@@ -399,11 +399,11 @@ function ScoringScreen({ token, slug, team, eventConfig, onSubmitted, onBack }: 
 
         {/* Actions */}
         <div className="mt-5 flex flex-col gap-2.5">
-          <button onClick={saveDraft} disabled={saving} className="btn-secondary w-full">
+          <button type="button" onClick={saveDraft} disabled={saving} className="btn-secondary w-full">
             {savedFeedback ? <><Check size={14} className="text-semantic-success" /> Saved!</> : saving ? 'Saving…' : 'Save Draft'}
           </button>
-          <button onClick={submit} disabled={!allScored || submitting}
-            className={`w-full rounded-xl py-4 text-sm font-semibold transition-all ${allScored ? 'bg-fg-default text-bg-base hover:opacity-90 active:scale-[0.99]' : 'cursor-not-allowed bg-bg-muted text-fg-subtle'}`}>
+          <button type="button" onClick={submit} disabled={!allScored || submitting}
+            className={`w-full py-4 text-sm font-semibold transition-all active:scale-[0.99] ${allScored ? 'btn-primary' : 'cursor-not-allowed rounded-xl bg-bg-muted text-fg-subtle'}`}>
             {submitting
               ? 'Submitting…'
               : alreadySubmitted
@@ -439,10 +439,10 @@ function SuccessScreen({ team, eventConfig, progress, onContinue }: { team: Team
           <div className={`h-full rounded-full transition-all ${allDone ? 'bg-semantic-success' : 'bg-fg-default'}`} style={{ width: `${pct}%` }} />
         </div>
       </div>
-      <button onClick={onContinue} className={`min-w-[200px] rounded-xl py-3.5 text-sm font-semibold ${allDone ? 'bg-semantic-success text-white hover:opacity-90' : 'bg-fg-default text-bg-base hover:opacity-90'}`}>
+      <button type="button" onClick={onContinue} className={`min-w-[200px] py-3.5 text-sm font-semibold active:scale-[0.99] ${allDone ? 'btn-primary bg-semantic-success hover:opacity-90' : 'btn-primary'}`}>
         {allDone ? 'View All Teams' : <>Score Next Team <ArrowRight size={15} className="inline" /></>}
       </button>
-      <button onClick={onContinue} className="mt-3 text-sm text-fg-subtle hover:text-fg-muted">
+      <button type="button" onClick={onContinue} className="mt-3 text-sm text-fg-subtle hover:text-fg-muted">
         Back to team list
       </button>
     </div>

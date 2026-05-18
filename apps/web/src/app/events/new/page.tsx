@@ -185,7 +185,22 @@ export default function NewEventPage() {
     finally { setLoading(false); }
   }
 
-  function copyPortalUrl() { navigator.clipboard.writeText(`${window.location.origin}/events/${created!.slug}/judge`); setCopiedUrl(true); setTimeout(() => setCopiedUrl(false), 2000); }
+  async function copyPortalUrl() {
+    const url = `${window.location.origin}/events/${created!.slug}/judge`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedUrl(true);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      setCopiedUrl(true);
+    }
+    setTimeout(() => setCopiedUrl(false), 2000);
+  }
 
   /* ─── Success ─── */
   if (created) {
@@ -212,7 +227,7 @@ export default function NewEventPage() {
               </div>
               <div className="mb-6 flex items-center gap-3 rounded-lg border border-bg-border bg-bg-muted p-4">
                 <code className="flex-1 truncate font-mono text-sm text-fg-muted">{portalUrl}</code>
-                <button onClick={copyPortalUrl} className="btn-ghost text-fg-muted">{copiedUrl ? <CheckCircle size={14} /> : <Copy size={14} />}</button>
+                <button type="button" onClick={copyPortalUrl} className="btn-ghost text-fg-muted">{copiedUrl ? <CheckCircle size={14} /> : <Copy size={14} />}</button>
                 <a href={portalUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost text-fg-muted"><ExternalLink size={14} /></a>
               </div>
               <div className="mb-5 flex items-start gap-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-xs text-amber-400">
@@ -289,7 +304,7 @@ export default function NewEventPage() {
                   <div key={t.id} className="card p-4">
                     <div className="mb-3 flex items-center justify-between">
                       <span className="text-xs font-mono text-fg-subtle">{t.id}</span>
-                      {data.tracks.length > 1 && <button onClick={() => setData(d => ({ ...d, tracks: d.tracks.filter(x => x.id !== t.id) }))} className="text-fg-muted hover:text-semantic-error"><Trash2 size={16} /></button>}
+                      {data.tracks.length > 1 && <button type="button" onClick={() => setData(d => ({ ...d, tracks: d.tracks.filter(x => x.id !== t.id) }))} className="text-fg-muted hover:text-semantic-error"><Trash2 size={16} /></button>}
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <input className="input" placeholder="Track name" value={t.name} onChange={e => { const v = e.target.value; setData(d => ({ ...d, tracks: d.tracks.map((x, idx) => idx === i ? { ...x, name: v, id: x.id.startsWith('track_') ? slugify(v).replace(/-/g, '_') || x.id : x.id } : x) })); }} />
@@ -297,7 +312,7 @@ export default function NewEventPage() {
                     </div>
                   </div>
                 ))}
-                <button onClick={() => setData(d => ({ ...d, tracks: [...d.tracks, { id: uid('track'), name: '', description: '' }] }))} className="btn-secondary w-full justify-center"><Plus size={16} /> Add Track</button>
+                <button type="button" onClick={() => setData(d => ({ ...d, tracks: [...d.tracks, { id: uid('track'), name: '', description: '' }] }))} className="btn-secondary w-full justify-center"><Plus size={16} /> Add Track</button>
               </div>
             )}
 
@@ -313,7 +328,7 @@ export default function NewEventPage() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {CRITERIA_PRESETS.map(preset => (
-                        <button key={preset.label} onClick={() => {
+                        <button type="button" key={preset.label} onClick={() => {
                           const nc = preset.criteria.map(c => ({ id: uid('crit'), description: c.description, max_score: c.max_score, weight: 0, track_id: null, scoring_type: c.scoring_type, rubric: [], name: c.name }));
                           setData(d => ({ ...d, criteria: normalizeWeights(nc) }));
                         }} className="btn-secondary text-xs">{preset.label}</button>
@@ -325,7 +340,7 @@ export default function NewEventPage() {
                   <div key={c.id} className="card p-4">
                     <div className="mb-3 flex items-center justify-between">
                       <span className="text-xs text-fg-subtle">Criterion {i + 1} · Weight <span className="font-mono text-fg-default">{c.weight}</span></span>
-                      <button onClick={() => { const nc = data.criteria.filter(x => x.id !== c.id); setData(d => ({ ...d, criteria: normalizeWeights(nc) })); }} className="text-fg-muted hover:text-semantic-error"><Trash2 size={16} /></button>
+                      <button type="button" onClick={() => { const nc = data.criteria.filter(x => x.id !== c.id); setData(d => ({ ...d, criteria: normalizeWeights(nc) })); }} className="text-fg-muted hover:text-semantic-error"><Trash2 size={16} /></button>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <input className="input" placeholder="Criterion name (e.g. Innovation)" value={c.name} onChange={e => setData(d => ({ ...d, criteria: d.criteria.map((x, idx) => idx === i ? { ...x, name: e.target.value } : x) }))} />
@@ -348,15 +363,15 @@ export default function NewEventPage() {
                           <div key={ri} className="flex gap-2">
                             <input type="number" className="input w-20" value={r.score} onChange={e => setData(d => ({ ...d, criteria: d.criteria.map((x, xi) => xi === i ? { ...x, rubric: x.rubric.map((y, yi) => yi === ri ? { ...y, score: Number(e.target.value) || 0 } : y) } : x) }))} />
                             <input className="input flex-1" placeholder="Label (e.g. Excellent)" value={r.label} onChange={e => setData(d => ({ ...d, criteria: d.criteria.map((x, xi) => xi === i ? { ...x, rubric: x.rubric.map((y, yi) => yi === ri ? { ...y, label: e.target.value } : y) } : x) }))} />
-                            <button onClick={() => setData(d => ({ ...d, criteria: d.criteria.map((x, xi) => xi === i ? { ...x, rubric: x.rubric.filter((_, yi) => yi !== ri) } : x) }))} className="text-fg-muted hover:text-semantic-error"><Trash2 size={16} /></button>
+                            <button type="button" onClick={() => setData(d => ({ ...d, criteria: d.criteria.map((x, xi) => xi === i ? { ...x, rubric: x.rubric.filter((_, yi) => yi !== ri) } : x) }))} className="text-fg-muted hover:text-semantic-error"><Trash2 size={16} /></button>
                           </div>
                         ))}
-                        <button onClick={() => setData(d => ({ ...d, criteria: d.criteria.map((x, xi) => xi === i ? { ...x, rubric: [...x.rubric, { score: x.rubric.length + 1, label: '', description: '' }] } : x) }))} className="btn-ghost text-xs"><Plus size={12} /> Add level</button>
+                        <button type="button" onClick={() => setData(d => ({ ...d, criteria: d.criteria.map((x, xi) => xi === i ? { ...x, rubric: [...x.rubric, { score: x.rubric.length + 1, label: '', description: '' }] } : x) }))} className="btn-ghost text-xs"><Plus size={12} /> Add level</button>
                       </div>
                     )}
                   </div>
                 ))}
-                <button onClick={() => { const nc = [...data.criteria, { id: uid('crit'), name: '', description: '', max_score: 10, weight: 0, track_id: null, scoring_type: 'numeric' as const, rubric: [] }]; setData(d => ({ ...d, criteria: normalizeWeights(nc) })); }} className="btn-secondary w-full justify-center"><Plus size={16} /> Add Criterion</button>
+                <button type="button" onClick={() => { const nc = [...data.criteria, { id: uid('crit'), name: '', description: '', max_score: 10, weight: 0, track_id: null, scoring_type: 'numeric' as const, rubric: [] }]; setData(d => ({ ...d, criteria: normalizeWeights(nc) })); }} className="btn-secondary w-full justify-center"><Plus size={16} /> Add Criterion</button>
               </div>
             )}
 
@@ -369,7 +384,7 @@ export default function NewEventPage() {
                   <div key={t.id} className="card p-4">
                     <div className="mb-3 flex items-center justify-between">
                       <span className="text-xs text-fg-subtle">Team {i + 1}</span>
-                      <button onClick={() => setData(d => ({ ...d, teams: d.teams.filter(x => x.id !== t.id) }))} className="text-fg-muted hover:text-semantic-error"><Trash2 size={16} /></button>
+                      <button type="button" onClick={() => setData(d => ({ ...d, teams: d.teams.filter(x => x.id !== t.id) }))} className="text-fg-muted hover:text-semantic-error"><Trash2 size={16} /></button>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <input className="input" placeholder="Team name" value={t.name} onChange={e => setData(d => ({ ...d, teams: d.teams.map((x, idx) => idx === i ? { ...x, name: e.target.value } : x) }))} />
@@ -388,7 +403,7 @@ export default function NewEventPage() {
                     </div>
                   </div>
                 ))}
-                <button onClick={() => setData(d => ({ ...d, teams: [...d.teams, { id: uid('team'), name: '', track_id: data.tracks[0]?.id ?? null, leader: '', table_number: '', project_title: '', project_desc: '' }] }))} className="btn-secondary w-full justify-center"><Plus size={16} /> Add Team</button>
+                <button type="button" onClick={() => setData(d => ({ ...d, teams: [...d.teams, { id: uid('team'), name: '', track_id: data.tracks[0]?.id ?? null, leader: '', table_number: '', project_title: '', project_desc: '' }] }))} className="btn-secondary w-full justify-center"><Plus size={16} /> Add Team</button>
               </div>
             )}
 
@@ -401,7 +416,7 @@ export default function NewEventPage() {
                   <div key={j.id} className="card p-4">
                     <div className="mb-3 flex items-center justify-between">
                       <span className="text-xs text-fg-subtle">Judge {i + 1}</span>
-                      <button onClick={() => setData(d => ({ ...d, judges: d.judges.filter(x => x.id !== j.id) }))} className="text-fg-muted hover:text-semantic-error"><Trash2 size={16} /></button>
+                      <button type="button" onClick={() => setData(d => ({ ...d, judges: d.judges.filter(x => x.id !== j.id) }))} className="text-fg-muted hover:text-semantic-error"><Trash2 size={16} /></button>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <input className="input" placeholder="Judge name" value={j.name} onChange={e => setData(d => ({ ...d, judges: d.judges.map((x, idx) => idx === i ? { ...x, name: e.target.value } : x) }))} />
@@ -423,7 +438,7 @@ export default function NewEventPage() {
                     </div>
                   </div>
                 ))}
-                <button onClick={() => setData(d => ({ ...d, judges: [...d.judges, { id: uid('judge'), name: '', email: '', tracks: ['all'] }] }))} className="btn-secondary w-full justify-center"><Plus size={16} /> Add Judge</button>
+                <button type="button" onClick={() => setData(d => ({ ...d, judges: [...d.judges, { id: uid('judge'), name: '', email: '', tracks: ['all'] }] }))} className="btn-secondary w-full justify-center"><Plus size={16} /> Add Judge</button>
                 {data.judges.length > 0 && (
                   <p className="text-center text-xs text-fg-subtle">{data.judges.length} judge{data.judges.length !== 1 ? 's' : ''} added · magic links sent after creation</p>
                 )}
@@ -582,11 +597,11 @@ export default function NewEventPage() {
 
         {/* Navigation */}
         <div className="mt-8 flex items-center justify-between">
-          <button onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0} className="btn-ghost disabled:opacity-30"><ArrowLeft size={16} /> Back</button>
+          <button type="button" onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0} className="btn-ghost disabled:opacity-30"><ArrowLeft size={16} /> Back</button>
           {step < STEPS.length - 1 ? (
-            <button onClick={() => setStep(s => s + 1)} disabled={!canNext} className="btn-primary disabled:opacity-30">Next <ArrowRight size={16} /></button>
+            <button type="button" onClick={() => setStep(s => s + 1)} disabled={!canNext} className="btn-primary disabled:opacity-30">Next <ArrowRight size={16} /></button>
           ) : (
-            <button onClick={handleCreate} disabled={loading || !canNext} className="btn-primary disabled:opacity-30">
+            <button type="button" onClick={handleCreate} disabled={loading || !canNext} className="btn-primary disabled:opacity-30">
               {loading ? <><Loader2 size={16} className="animate-spin" /> Creating...</> : <><CheckCircle size={16} /> Create Event</>}
             </button>
           )}
@@ -613,7 +628,7 @@ function BulkImportTeams({ tracks, onImport }: { tracks: Track[]; onImport: (tea
   }
 
   if (!open) return (
-    <button onClick={() => setOpen(true)} className="btn-ghost w-full justify-center text-xs text-fg-subtle">
+    <button type="button" onClick={() => setOpen(true)} className="btn-ghost w-full justify-center text-xs text-fg-subtle">
       <Upload size={14} /> Bulk import via CSV paste
     </button>
   );
@@ -622,7 +637,7 @@ function BulkImportTeams({ tracks, onImport }: { tracks: Track[]; onImport: (tea
     <div className="card p-4">
       <div className="mb-2 flex items-center justify-between">
         <p className="text-sm font-medium text-fg-default">Bulk Import Teams</p>
-        <button onClick={() => { setOpen(false); setCsv(''); setPreview([]); }} className="text-xs text-fg-muted">Cancel</button>
+        <button type="button" onClick={() => { setOpen(false); setCsv(''); setPreview([]); }} className="text-xs text-fg-muted">Cancel</button>
       </div>
       <p className="mb-3 text-xs text-fg-subtle">One team per line: <code className="font-mono">Team Name, Leader Name, Table#, Track Name</code></p>
       <textarea
@@ -639,7 +654,7 @@ function BulkImportTeams({ tracks, onImport }: { tracks: Track[]; onImport: (tea
           </div>
         </div>
       )}
-      <button disabled={preview.length === 0} onClick={() => { onImport(preview); setOpen(false); setCsv(''); setPreview([]); }} className="btn-primary w-full justify-center text-sm disabled:opacity-40">
+      <button type="button" disabled={preview.length === 0} onClick={() => { onImport(preview); setOpen(false); setCsv(''); setPreview([]); }} className="btn-primary w-full justify-center text-sm disabled:opacity-40">
         Import {preview.length > 0 ? preview.length : ''} Teams
       </button>
     </div>
@@ -665,7 +680,7 @@ function BulkImportJudges({ tracks, onImport }: { tracks: Track[]; onImport: (ju
   }
 
   if (!open) return (
-    <button onClick={() => setOpen(true)} className="btn-ghost w-full justify-center text-xs text-fg-subtle">
+    <button type="button" onClick={() => setOpen(true)} className="btn-ghost w-full justify-center text-xs text-fg-subtle">
       <Upload size={14} /> Bulk import via CSV paste
     </button>
   );
@@ -674,7 +689,7 @@ function BulkImportJudges({ tracks, onImport }: { tracks: Track[]; onImport: (ju
     <div className="card p-4">
       <div className="mb-2 flex items-center justify-between">
         <p className="text-sm font-medium text-fg-default">Bulk Import Judges</p>
-        <button onClick={() => { setOpen(false); setCsv(''); setPreview([]); }} className="text-xs text-fg-muted">Cancel</button>
+        <button type="button" onClick={() => { setOpen(false); setCsv(''); setPreview([]); }} className="text-xs text-fg-muted">Cancel</button>
       </div>
       <p className="mb-3 text-xs text-fg-subtle">One judge per line: <code className="font-mono">Name, email@domain.com, Track Name (optional)</code></p>
       <textarea
@@ -691,7 +706,7 @@ function BulkImportJudges({ tracks, onImport }: { tracks: Track[]; onImport: (ju
           </div>
         </div>
       )}
-      <button disabled={preview.length === 0} onClick={() => { onImport(preview); setOpen(false); setCsv(''); setPreview([]); }} className="btn-primary w-full justify-center text-sm disabled:opacity-40">
+      <button type="button" disabled={preview.length === 0} onClick={() => { onImport(preview); setOpen(false); setCsv(''); setPreview([]); }} className="btn-primary w-full justify-center text-sm disabled:opacity-40">
         Import {preview.length > 0 ? preview.length : ''} Judges
       </button>
     </div>

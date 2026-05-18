@@ -136,7 +136,7 @@ export default function ConfigPage() {
           </div>
           {errBasic && <p className="mt-3 text-sm text-semantic-error">{errBasic}</p>}
           <div className="mt-5">
-            <button onClick={saveBasic} disabled={savingBasic} className="btn-primary">
+            <button type="button" onClick={saveBasic} disabled={savingBasic} className="btn-primary">
               {savedBasic ? <><Check size={14} /> Saved</> : savingBasic ? 'Saving…' : <><Save size={14} /> Save Basic Info</>}
             </button>
           </div>
@@ -158,11 +158,11 @@ export default function ConfigPage() {
               <div key={t.id} className="flex gap-2">
                 <input className="input flex-1" placeholder="Track name" value={t.name} onChange={(e) => updateTrack(i, { name: e.target.value })} />
                 <input className="input flex-1" placeholder="Description (optional)" value={t.description} onChange={(e) => updateTrack(i, { description: e.target.value })} />
-                <button onClick={() => setTracks(ts => ts.filter((_, j) => j !== i))} className="btn-ghost px-2 text-semantic-error hover:bg-semantic-error/10"><Trash2 size={14} /></button>
+                <button type="button" onClick={() => setTracks(ts => ts.filter((_, j) => j !== i))} className="btn-ghost px-2 text-semantic-error hover:bg-semantic-error/10"><Trash2 size={14} /></button>
               </div>
             ))}
           </div>
-          <button onClick={() => setTracks(ts => [...ts, { id: uid(), name: '', description: '' }])} className="btn-ghost mt-3 text-sm">
+          <button type="button" onClick={() => setTracks(ts => [...ts, { id: uid(), name: '', description: '' }])} className="btn-ghost mt-3 text-sm">
             <Plus size={14} /> Add Track
           </button>
         </div>
@@ -185,14 +185,14 @@ export default function ConfigPage() {
                   <option value="">All tracks</option>
                   {tracks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
-                <button onClick={() => setCriteria(cs => cs.filter((_, j) => j !== i))} className="btn-ghost px-2 text-semantic-error hover:bg-semantic-error/10"><Trash2 size={14} /></button>
+                <button type="button" onClick={() => setCriteria(cs => cs.filter((_, j) => j !== i))} className="btn-ghost px-2 text-semantic-error hover:bg-semantic-error/10"><Trash2 size={14} /></button>
               </div>
             ))}
           </div>
           {criteria.length > 0 && (
             <p className="mt-2 text-xs text-fg-subtle">Weight% · Max score · Track</p>
           )}
-          <button onClick={() => setCriteria(cs => [...cs, { id: uid(), name: '', weight: 0.5, max_score: 10, track_id: null, scoring_type: 'numeric' }])} className="btn-ghost mt-3 text-sm">
+          <button type="button" onClick={() => setCriteria(cs => [...cs, { id: uid(), name: '', weight: 0.5, max_score: 10, track_id: null, scoring_type: 'numeric' }])} className="btn-ghost mt-3 text-sm">
             <Plus size={14} /> Add Criterion
           </button>
         </div>
@@ -213,11 +213,11 @@ export default function ConfigPage() {
                     {tracks.map(tr => <option key={tr.id} value={tr.id}>{tr.name}</option>)}
                   </select>
                 )}
-                <button onClick={() => setTeams(ts => ts.filter((_, j) => j !== i))} className="btn-ghost px-2 text-semantic-error hover:bg-semantic-error/10"><Trash2 size={14} /></button>
+                <button type="button" onClick={() => setTeams(ts => ts.filter((_, j) => j !== i))} className="btn-ghost px-2 text-semantic-error hover:bg-semantic-error/10"><Trash2 size={14} /></button>
               </div>
             ))}
           </div>
-          <button onClick={() => setTeams(ts => [...ts, { id: uid(), name: '', track_id: null, table_number: '' }])} className="btn-ghost mt-3 text-sm">
+          <button type="button" onClick={() => setTeams(ts => [...ts, { id: uid(), name: '', track_id: null, table_number: '' }])} className="btn-ghost mt-3 text-sm">
             <Plus size={14} /> Add Team
           </button>
         </div>
@@ -240,11 +240,11 @@ export default function ConfigPage() {
                     {tracks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 )}
-                <button onClick={() => setJudges(js => js.filter((_, k) => k !== i))} className="btn-ghost px-2 text-semantic-error hover:bg-semantic-error/10"><Trash2 size={14} /></button>
+                <button type="button" onClick={() => setJudges(js => js.filter((_, k) => k !== i))} className="btn-ghost px-2 text-semantic-error hover:bg-semantic-error/10"><Trash2 size={14} /></button>
               </div>
             ))}
           </div>
-          <button onClick={() => setJudges(js => [...js, { id: uid(), name: '', email: '', tracks: [] }])} className="btn-ghost mt-3 text-sm">
+          <button type="button" onClick={() => setJudges(js => [...js, { id: uid(), name: '', email: '', tracks: [] }])} className="btn-ghost mt-3 text-sm">
             <Plus size={14} /> Add Judge
           </button>
         </div>
@@ -252,17 +252,17 @@ export default function ConfigPage() {
         {/* Apply Structure */}
         {errStruct && <p className="mb-3 text-sm text-semantic-error">{errStruct}</p>}
         {!confirmReset ? (
-          <button onClick={() => setConfirmReset(true)} disabled={savingStruct} className="btn-primary">
+          <button type="button" onClick={() => setConfirmReset(true)} disabled={savingStruct} className="btn-primary">
             {savedStruct ? <><Check size={14} /> Applied</> : <><Save size={14} /> Apply Structure</>}
           </button>
         ) : (
           <div className="flex items-center gap-3 rounded-lg border border-semantic-error/30 bg-semantic-error/5 px-4 py-3">
             <AlertTriangle size={15} className="shrink-0 text-semantic-error" />
             <span className="text-sm text-semantic-error">This resets all scores and judge sessions. Confirm?</span>
-            <button onClick={saveStructure} disabled={savingStruct} className="ml-auto btn-primary bg-semantic-error hover:bg-semantic-error/90 text-sm">
+            <button type="button" onClick={saveStructure} disabled={savingStruct} className="ml-auto btn-primary bg-semantic-error hover:bg-semantic-error/90 text-sm">
               {savingStruct ? 'Saving…' : 'Yes, Reset & Save'}
             </button>
-            <button onClick={() => setConfirmReset(false)} className="btn-ghost text-sm">Cancel</button>
+            <button type="button" onClick={() => setConfirmReset(false)} className="btn-ghost text-sm">Cancel</button>
           </div>
         )}
 

@@ -185,7 +185,7 @@ function JudgeAccessPanel({ slug, judges, notOrg, copiedPortal, onPinUpdated, on
 
       <div className="mb-5 flex items-center gap-2 rounded-lg border border-bg-border bg-bg-muted px-4 py-2.5">
         <code className="flex-1 truncate font-mono text-xs text-fg-muted">{portalUrl}</code>
-        <button onClick={onCopyPortal} className="flex items-center gap-1 text-xs text-fg-muted hover:text-fg-default">
+        <button type="button" onClick={onCopyPortal} className="flex items-center gap-1 text-xs text-fg-muted hover:text-fg-default">
           {copiedPortal ? <><CheckCircle size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
         </button>
       </div>
@@ -262,11 +262,11 @@ function JudgeCard({ judge, slug, portalUrl, onPinUpdated }: { judge: any; slug:
             onChange={(e) => setPin(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && savePin()}
           />
-          <button onClick={() => setShowPin(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg-muted">
+          <button type="button" onClick={() => setShowPin(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg-muted">
             {showPin ? <EyeOff size={13} /> : <Eye size={13} />}
           </button>
         </div>
-        <button onClick={savePin} disabled={saving || !pin} className="btn-secondary px-3 text-xs disabled:opacity-40">
+        <button type="button" onClick={savePin} disabled={saving || !pin} className="btn-secondary px-3 text-xs disabled:opacity-40">
           {saved ? <CheckCircle size={13} className="text-semantic-success" /> : saving ? '…' : 'Save'}
         </button>
       </div>

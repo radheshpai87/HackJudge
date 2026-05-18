@@ -57,9 +57,9 @@ export default function Home() {
             Create your event <ArrowRight size={15} />
           </Link>
           {!loggedIn && (
-            <Link href="/login" className="btn-secondary min-w-[190px] text-sm">
-              Organizer sign in
-            </Link>
+            <button type="button" className="btn-secondary min-w-[190px] text-sm" onClick={(e) => { e.preventDefault(); document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }); }}>
+              How it works
+            </button>
           )}
         </div>
         <div className="mt-12 flex flex-wrap items-center justify-center gap-2">
@@ -131,7 +131,7 @@ export default function Home() {
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-bg-subtle text-sm font-semibold text-fg-default">{t.name.charAt(0)}</div>
                   <div>
                     <p className="text-sm font-medium text-fg-default">{t.name}</p>
-                    <p className="text-xs text-fg-subtle">{t.role}</p>
+                    <button type="button" className="btn-ghost text-fg-muted" onClick={(e) => { e.preventDefault(); document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }}>Learn more</button>
                   </div>
                 </div>
               </div>
