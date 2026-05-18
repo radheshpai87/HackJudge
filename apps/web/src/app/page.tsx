@@ -6,7 +6,10 @@ import {
   Users, FileText, Star, ArrowUpRight
 } from 'lucide-react';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+function createEventHref() {
+  if (typeof window === 'undefined') return '/login?next=/events/new';
+  return localStorage.getItem('token') ? '/events/new' : '/login?next=/events/new';
+}
 
 const FEATURES = [
   { icon: Zap, title: 'Zero-friction judging', desc: 'Judges log in with a PIN or magic link. No accounts, no passwords.' },
@@ -25,6 +28,7 @@ const STEPS = [
 ];
 
 export default function Home() {
+  const createHref = createEventHref();
   return (
     <main className="flex min-h-screen flex-col">
       {/* ─── Nav ─── */}
@@ -34,7 +38,7 @@ export default function Home() {
         </Link>
         <div className="flex items-center gap-3">
           <Link href="/login" className="btn-ghost text-sm">Sign In</Link>
-          <Link href="/events/new" className="btn-primary text-sm">Create Event</Link>
+          <Link href={createHref} className="btn-primary text-sm">Create Event</Link>
         </div>
       </header>
 
@@ -53,7 +57,7 @@ export default function Home() {
           Define criteria, assign judges, collect scores in real-time, and publish weighted results — all from a single YAML config.
         </p>
         <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row">
-          <Link href="/events/new" className="btn-primary min-w-[180px]">
+          <Link href={createHref} className="btn-primary min-w-[180px]">
             Create your event <ArrowRight size={15} />
           </Link>
           <Link href="/login" className="btn-secondary min-w-[180px]">Sign in as organizer</Link>
@@ -161,7 +165,7 @@ export default function Home() {
         <p className="mx-auto mt-4 max-w-md text-base text-fg-muted">
           No setup, no DevOps. Just describe your hackathon and start judging.
         </p>
-        <Link href="/events/new" className="btn-primary mt-8 inline-flex min-w-[200px]">
+        <Link href={createHref} className="btn-primary mt-8 inline-flex min-w-[200px]">
           Create event <ArrowUpRight size={15} />
         </Link>
       </section>
@@ -173,7 +177,7 @@ export default function Home() {
             <Hexagon size={16} strokeWidth={1.5} /> HackJudge
           </div>
           <div className="flex items-center gap-6 text-sm text-fg-muted">
-            <Link href="/events/new" className="hover:text-fg-default">Create event</Link>
+            <Link href={createHref} className="hover:text-fg-default">Create event</Link>
             <Link href="/login" className="hover:text-fg-default">Login</Link>
           </div>
           <p className="text-xs text-fg-subtle">Open-source hackathon judging platform</p>

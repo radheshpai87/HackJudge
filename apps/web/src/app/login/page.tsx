@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Hexagon, ArrowRight } from 'lucide-react';
 
@@ -12,6 +12,13 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const reduced = useReducedMotion();
+
+  useEffect(() => {
+    if (localStorage.getItem('token')) {
+      const next = new URLSearchParams(window.location.search).get('next') || '/home';
+      window.location.href = next;
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

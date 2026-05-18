@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, ArrowRight, Plus, Trash2, CheckCircle, LayoutDashboard,
@@ -130,11 +130,17 @@ export default function NewEventPage() {
   const [error, setError] = useState('');
   const [created, setCreated] = useState<CreatedEventData | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [authed, setAuthed] = useState(false);
 
-  if (typeof window !== 'undefined' && !localStorage.getItem('token')) {
-    window.location.href = '/login?next=/events/new';
-    return null;
-  }
+  useEffect(() => {
+    if (!localStorage.getItem('token')) {
+      window.location.href = '/login?next=/events/new';
+    } else {
+      setAuthed(true);
+    }
+  }, []);
+
+  if (!authed) return null;
 
   /* ─── Validation ─── */
   const canNext = useMemo(() => {
