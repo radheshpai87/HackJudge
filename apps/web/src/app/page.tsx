@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  ArrowRight, Hexagon, Zap, Shield, BarChart3,
+  ArrowRight, Zap, Shield, BarChart3,
   Users, Star, ArrowUpRight, CheckCircle, QrCode, FileDown
 } from 'lucide-react';
+import Navbar from '@/components/Navbar';
 
 const FEATURES = [
   { icon: Zap, title: 'Instant judge access', desc: 'Each judge gets a unique magic link or PIN. No accounts, no passwords — works on any device.' },
@@ -35,26 +36,8 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col">
-
-      {/* ─── Nav ─── */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-bg-border bg-bg-base/95 px-8 py-4 backdrop-blur">
-        <Link href="/" className="flex items-center gap-2 text-sm font-semibold text-fg-default">
-          <Hexagon size={18} strokeWidth={1.5} /> HackJudge
-        </Link>
-        <nav className="flex items-center gap-3">
-          {loggedIn ? (
-            <>
-              <Link href={dashHref} className="btn-ghost text-sm">My Events</Link>
-              <Link href={createHref} className="btn-primary text-sm">New Event</Link>
-            </>
-          ) : (
-            <>
-              <Link href="/login" className="btn-ghost text-sm">Sign In</Link>
-              <Link href={createHref} className="btn-primary text-sm">Get Started</Link>
-            </>
-          )}
-        </nav>
-      </header>
+      <Navbar />
+      <div className="nav-spacer" />
 
       {/* ─── Hero ─── */}
       <section className="relative flex flex-col items-center justify-center px-6 py-28 text-center">
@@ -87,7 +70,7 @@ export default function Home() {
       </section>
 
       {/* ─── How it works ─── */}
-      <section className="border-t border-bg-border px-6 py-20">
+      <section id="how-it-works" className="border-t border-bg-border px-6 py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 text-center">
             <span className="text-xs font-medium uppercase tracking-widest text-fg-subtle">How it works</span>
@@ -106,7 +89,7 @@ export default function Home() {
       </section>
 
       {/* ─── Features ─── */}
-      <section className="border-y border-bg-border bg-bg-subtle px-6 py-20">
+      <section id="features" className="border-y border-bg-border bg-bg-subtle px-6 py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 text-center">
             <span className="text-xs font-medium uppercase tracking-widest text-fg-subtle">Features</span>
@@ -180,12 +163,10 @@ export default function Home() {
       {/* ─── Footer ─── */}
       <footer className="border-t border-bg-border px-8 py-6">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 sm:flex-row">
-          <div className="flex items-center gap-2 text-sm font-medium text-fg-default">
-            <Hexagon size={16} strokeWidth={1.5} /> HackJudge
-          </div>
+          <p className="text-sm font-medium text-fg-default">HackJudge</p>
           <div className="flex items-center gap-6 text-sm text-fg-muted">
-            <Link href={createHref} className="hover:text-fg-default">Create event</Link>
-            <Link href="/login" className="hover:text-fg-default">Organizer login</Link>
+            <Link href={createHref} className="transition-colors hover:text-fg-default">Create event</Link>
+            <Link href="/login" className="transition-colors hover:text-fg-default">Organizer login</Link>
           </div>
           <p className="text-xs text-fg-subtle">Open-source hackathon judging platform</p>
         </div>

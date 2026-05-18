@@ -71,33 +71,41 @@ export default function EventDashboard() {
   return (
     <div className="page-shell flex min-h-screen">
       {/* Sidebar */}
-      <aside className="hidden w-56 flex-shrink-0 flex-col border-r border-bg-border bg-bg-subtle p-5 md:flex">
-        <div className="mb-1">
-          <h2 className="truncate text-sm font-semibold text-fg-default">{eventName}</h2>
+      <aside className="hidden w-60 flex-shrink-0 flex-col border-r border-bg-border bg-bg-subtle md:flex">
+        {/* Top: back to hub */}
+        <div className="border-b border-bg-border px-4 py-3">
+          <Link href="/home" className="flex items-center gap-1.5 text-xs text-fg-subtle transition-colors hover:text-fg-muted">
+            <span className="text-fg-disabled">←</span> All Events
+          </Link>
+        </div>
+
+        {/* Event identity */}
+        <div className="border-b border-bg-border px-4 py-4">
+          <div className={`mb-2 inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-medium ${statusBadge}`}>{statusLabel}</div>
+          <h2 className="truncate text-sm font-semibold text-fg-default leading-snug">{eventName}</h2>
           <p className="mt-0.5 font-mono text-2xs text-fg-subtle">{String(slug)}</p>
         </div>
 
-        <nav className="mt-5 flex flex-col gap-0.5">
-          <SidebarLink href={`/events/${slug}`} icon={<Activity size={15} />} label="Dashboard" active />
-          <SidebarLink href={`/events/${slug}/results`} icon={<BarChart3 size={15} />} label="Results" />
-          <SidebarLink href={`/events/${slug}/leaderboard`} icon={<Trophy size={15} />} label="Leaderboard" />
-          <SidebarLink href={`/events/${slug}/judge`} icon={<QrCode size={15} />} label="Judge Portal" />
-          <SidebarLink href={`/events/${slug}/config`} icon={<Settings size={15} />} label="Settings" />
+        {/* Nav */}
+        <nav className="flex flex-col gap-0.5 p-3">
+          <SidebarLink href={`/events/${slug}`} icon={<Activity size={14} />} label="Dashboard" active />
+          <SidebarLink href={`/events/${slug}/results`} icon={<BarChart3 size={14} />} label="Results" />
+          <SidebarLink href={`/events/${slug}/leaderboard`} icon={<Trophy size={14} />} label="Leaderboard" />
+          <SidebarLink href={`/events/${slug}/judge`} icon={<QrCode size={14} />} label="Judge Portal" />
+          <div className="my-1 h-px bg-bg-border" />
+          <SidebarLink href={`/events/${slug}/config`} icon={<Settings size={14} />} label="Settings" />
         </nav>
 
-        <div className="mt-auto space-y-3 pt-6">
-          <div>
-            <div className="mb-1 flex items-center justify-between text-xs text-fg-muted">
-              <span>Progress</span>
-              <span className="font-mono text-fg-default">{completionPct}%</span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-bg-muted">
-              <div className={`h-full rounded-full transition-all ${completionPct === 100 ? 'bg-semantic-success' : 'bg-fg-default'}`} style={{ width: `${completionPct}%` }} />
-            </div>
+        {/* Progress footer */}
+        <div className="mt-auto border-t border-bg-border p-4">
+          <div className="mb-2 flex items-center justify-between text-xs">
+            <span className="text-fg-muted">Scoring progress</span>
+            <span className={`font-mono font-medium ${completionPct === 100 ? 'text-semantic-success' : 'text-fg-default'}`}>{completionPct}%</span>
           </div>
-          <Link href={`/events/${slug}/results`} className="btn-primary block w-full text-center text-sm">
-            Results →
-          </Link>
+          <div className="h-1 overflow-hidden rounded-full bg-bg-muted">
+            <div className={`h-full rounded-full transition-all duration-500 ${completionPct === 100 ? 'bg-semantic-success' : 'bg-fg-muted'}`} style={{ width: `${completionPct}%` }} />
+          </div>
+          <p className="mt-1.5 text-2xs text-fg-subtle">{completedSubmissions} / {totalAssignments || '—'} submitted</p>
         </div>
       </aside>
 
@@ -156,7 +164,7 @@ export default function EventDashboard() {
 
 function SidebarLink({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active?: boolean }) {
   return (
-    <Link href={href} className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${active ? 'bg-bg-muted font-medium text-fg-default' : 'text-fg-muted hover:bg-bg-muted hover:text-fg-default'}`}>
+    <Link href={href} className={active ? 'sidebar-item-active' : 'sidebar-item'}>
       {icon} {label}
     </Link>
   );

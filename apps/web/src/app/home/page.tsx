@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  Plus, LogOut, BarChart3, Users, Trophy,
-  ArrowRight, Clock, ExternalLink, Hexagon
+  Plus, BarChart3, Users, Trophy,
+  Clock, ExternalLink
 } from 'lucide-react';
+import Navbar from '@/components/Navbar';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
@@ -49,26 +50,10 @@ export default function HomePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  function signOut() {
-    localStorage.removeItem('token');
-    window.location.href = '/';
-  }
-
   return (
     <main className="min-h-screen bg-bg-base">
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-bg-border bg-bg-base/95 px-8 py-3.5 backdrop-blur">
-        <Link href="/" className="flex items-center gap-2 text-sm font-semibold text-fg-default">
-          <Hexagon size={17} strokeWidth={1.5} /> HackJudge
-        </Link>
-        <div className="flex items-center gap-3">
-          <Link href="/events/new" className="btn-primary text-sm">
-            <Plus size={14} /> New Event
-          </Link>
-          <button onClick={signOut} className="flex items-center gap-1.5 text-xs text-fg-subtle hover:text-fg-muted">
-            <LogOut size={13} /> Sign out
-          </button>
-        </div>
-      </header>
+      <Navbar />
+      <div className="nav-spacer" />
 
       <div className="mx-auto max-w-5xl px-6 py-10">
         <div className="mb-8 flex items-center justify-between">
@@ -76,6 +61,9 @@ export default function HomePage() {
             <h1 className="text-2xl font-semibold text-fg-default">My Events</h1>
             <p className="mt-1 text-sm text-fg-muted">{events.length} event{events.length !== 1 ? 's' : ''} total</p>
           </div>
+          <Link href="/events/new" className="btn-primary text-sm">
+            <Plus size={14} /> New Event
+          </Link>
         </div>
 
         {err && <p className="mb-6 text-sm text-semantic-error">{err}</p>}

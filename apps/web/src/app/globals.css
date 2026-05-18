@@ -82,22 +82,25 @@ html.lenis, html.lenis body {
 /* ─── Tailwind Component Layer ─── */
 @layer components {
   .card {
-    @apply rounded-xl border border-bg-border bg-bg-subtle;
+    @apply rounded-xl border border-bg-border bg-bg-subtle shadow-sm shadow-black/20;
   }
   .card-hover {
-    @apply rounded-xl border border-bg-border bg-bg-subtle transition-colors duration-150 hover:border-fg-muted/20;
+    @apply rounded-xl border border-bg-border bg-bg-subtle shadow-sm shadow-black/20 transition-all duration-200 hover:border-fg-muted/25 hover:shadow-md hover:shadow-black/30;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md bg-fg-default px-5 py-2.5 text-sm font-medium text-bg-base transition-opacity duration-150 hover:opacity-85 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-fg-default px-5 py-2.5 text-sm font-semibold text-bg-base shadow-sm shadow-black/20 transition-all duration-150 hover:opacity-88 active:scale-[0.98] disabled:opacity-40;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-bg-border bg-bg-muted px-5 py-2.5 text-sm font-medium text-fg-muted transition-colors duration-150 hover:border-fg-muted/20 hover:text-fg-default;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-bg-border bg-bg-muted px-5 py-2.5 text-sm font-medium text-fg-muted shadow-sm shadow-black/10 transition-all duration-150 hover:border-fg-muted/30 hover:text-fg-default active:scale-[0.98];
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-fg-muted transition-colors duration-150 hover:bg-bg-muted hover:text-fg-default;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-fg-muted transition-all duration-150 hover:bg-bg-muted hover:text-fg-default active:scale-[0.98];
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-semantic-error/30 bg-semantic-error/10 px-5 py-2.5 text-sm font-medium text-semantic-error transition-all duration-150 hover:bg-semantic-error/20 active:scale-[0.98];
   }
   .input {
-    @apply w-full rounded-md border border-bg-border bg-bg-muted px-4 py-3 text-sm text-fg-default placeholder-fg-subtle outline-none transition-colors duration-150 focus:border-fg-muted;
+    @apply w-full rounded-lg border border-bg-border bg-bg-muted px-4 py-2.5 text-sm text-fg-default placeholder-fg-subtle outline-none ring-0 transition-all duration-150 focus:border-fg-subtle/60 focus:ring-1 focus:ring-fg-subtle/20;
   }
   .label {
     @apply mb-1.5 block text-xs font-medium text-fg-muted;
@@ -109,7 +112,7 @@ html.lenis, html.lenis body {
     @apply text-sm text-fg-muted;
   }
   .stat-card {
-    @apply rounded-xl border border-bg-border bg-bg-subtle p-6;
+    @apply rounded-xl border border-bg-border bg-bg-subtle p-6 shadow-sm shadow-black/20;
   }
   .page-shell {
     @apply min-h-screen bg-bg-base text-fg-default;
@@ -119,6 +122,17 @@ html.lenis, html.lenis body {
   }
   .divider {
     @apply h-px bg-bg-border;
+  }
+  /* Spacer to push content below the floating nav */
+  .nav-spacer {
+    @apply h-20 md:h-24;
+  }
+  /* Sidebar nav item */
+  .sidebar-item {
+    @apply flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-fg-muted transition-all duration-150 hover:bg-bg-muted hover:text-fg-default;
+  }
+  .sidebar-item-active {
+    @apply flex items-center gap-2.5 rounded-lg bg-bg-muted px-3 py-2 text-sm font-medium text-fg-default;
   }
 }
 
