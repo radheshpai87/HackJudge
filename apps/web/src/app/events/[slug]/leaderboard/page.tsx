@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Trophy, Medal, Award, ArrowLeft } from 'lucide-react';
+import { Trophy, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
@@ -11,15 +11,52 @@ export default function LeaderboardPage() {
   const { slug } = useParams();
   const [results, setResults] = useState<any>(null);
   const [trackFilter, setTrackFilter] = useState<string>('all');
+  const [status, setStatus] = useState<'loading' | 'empty' | 'error' | 'ok'>('loading');
 
   useEffect(() => {
-    fetch(`${API}/events/${slug}/results`).then((r) => r.json()).then((d) => setResults(d.data));
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('token') ?? '') : '';
+    fetch(`${API}/events/${slug}/results`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then((r) => {
+        if (r.status === 401) { setStatus('error'); return null; }
+        return r.json();
+      })
+      .then((d) => {
+        if (!d) return;
+        if (!d.success || !d.data) { setStatus('empty'); return; }
+        setResults(d.data);
+        setStatus('ok');
+      })
+      .catch(() => setStatus('error'));
   }, [slug]);
 
-  if (!results) {
+  if (status === 'loading') {
     return (
       <main className="page-shell flex min-h-screen items-center justify-center">
-        <p className="text-sm text-fg-muted">Loading leaderboard...</p>
+        <p className="text-sm text-fg-muted">Loading leaderboard…</p>
+      </main>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <main className="page-shell flex min-h-screen items-center justify-center px-6">
+        <div className="text-center">
+          <p className="text-sm text-semantic-error">Failed to load leaderboard. Check your connection or sign in as organizer.</p>
+          <Link href={`/events/${slug}`} className="btn-ghost mt-4 inline-flex text-sm text-fg-muted"><ArrowLeft size={14} /> Back to Dashboard</Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (status === 'empty') {
+    return (
+      <main className="page-shell flex min-h-screen items-center justify-center px-6">
+        <div className="text-center">
+          <Trophy size={40} className="mx-auto mb-4 text-fg-subtle" />
+          <h2 className="text-lg font-medium text-fg-default">No results yet</h2>
+          <p className="mt-2 text-sm text-fg-muted">Results haven&apos;t been generated yet. Generate them from the dashboard.</p>
+          <Link href={`/events/${slug}/results`} className="btn-primary mt-6 inline-flex">Go to Results</Link>
+        </div>
       </main>
     );
   }

@@ -155,11 +155,3 @@ export default function ResultsPage() {
     </main>
   );
 }
-
-function ExportButton({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
-  return (
-    <a href={href} className="btn-secondary text-sm">
-      {icon} {label}
-    </a>
-  );
-}
