@@ -1,80 +1,48 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  Plus, LogOut, BarChart3, Users, Trophy,
-  ArrowRight, Clock, ExternalLink, Hexagon
+  ArrowRight, Hexagon, Trophy, Zap, Shield, BarChart3,
+  Users, FileText, Star, ArrowUpRight
 } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
+const FEATURES = [
+  { icon: Zap, title: 'Zero-friction judging', desc: 'Judges log in with a PIN or magic link. No accounts, no passwords.' },
+  { icon: FileText, title: 'YAML-driven config', desc: 'Describe your event in a single file. Tracks, criteria, teams, and judges in one place.' },
+  { icon: BarChart3, title: 'Weighted + outlier-aware', desc: 'Scores are weighted by criterion. Outliers are auto-filtered. Tiebreakers included.' },
+  { icon: Users, title: 'Multi-track support', desc: 'Run parallel tracks with dedicated judges and per-track criteria.' },
+  { icon: Shield, title: 'Full audit trail', desc: 'Every score, login, and export is logged with timestamp and actor.' },
+  { icon: Trophy, title: 'Live results', desc: 'Watch the leaderboard update in real-time as judges submit scores.' },
+];
 
-interface EventSummary {
-  slug: string;
-  name: string;
-  status: 'not_started' | 'open' | 'closed';
-  teams: number;
-  judges: number;
-  completedSubmissions: number;
-  totalAssignments: number;
-  createdAt: string;
-}
-
-function statusBadge(status: EventSummary['status']) {
-  if (status === 'open') return <span className="rounded-full bg-semantic-success/15 px-2.5 py-0.5 text-xs font-medium text-semantic-success">Open</span>;
-  if (status === 'closed') return <span className="rounded-full bg-bg-muted px-2.5 py-0.5 text-xs font-medium text-fg-subtle">Closed</span>;
-  return <span className="rounded-full bg-semantic-warning/10 px-2.5 py-0.5 text-xs font-medium text-semantic-warning">Not started</span>;
-}
+const STEPS = [
+  { num: '01', title: 'Write your config', desc: 'Fill a short YAML with event details, tracks, criteria, teams, and judges.' },
+  { num: '02', title: 'Upload & create', desc: 'Paste the YAML into the editor. The event is created instantly with QR codes for judges.' },
+  { num: '03', title: 'Judges score live', desc: 'Judges scan their QR, log in, and rate teams on any device.' },
+  { num: '04', title: 'Publish results', desc: 'Weighted scores are calculated automatically. Export or share the leaderboard.' },
+];
 
 export default function Home() {
-  const [authState, setAuthState] = useState<'loading' | 'guest' | 'organizer'>('loading');
-  const [events, setEvents] = useState<EventSummary[]>([]);
-  const [eventsLoading, setEventsLoading] = useState(false);
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) { setAuthState('guest'); return; }
-    setEventsLoading(true);
-    fetch(`${API}/events/status-all`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) { setEvents(d.data); setAuthState('organizer'); }
-        else { localStorage.removeItem('token'); setAuthState('guest'); }
-      })
-      .catch(() => setAuthState('guest'))
-      .finally(() => setEventsLoading(false));
-  }, []);
-
-  if (authState === 'loading') {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-fg-subtle border-t-fg-default" />
-      </div>
-    );
-  }
-
-  if (authState === 'organizer') return <OrganizerHub events={events} loading={eventsLoading} />;
-  return <GuestLanding />;
-}
-
-/* ═══════════════════════════════════ GUEST LANDING ═══════ */
-function GuestLanding() {
   return (
     <main className="flex min-h-screen flex-col">
-      {/* Nav */}
+      {/* ─── Nav ─── */}
       <header className="flex items-center justify-between border-b border-bg-border px-8 py-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-fg-default">
+        <Link href="/" className="flex items-center gap-2 text-sm font-semibold text-fg-default">
           <Hexagon size={18} strokeWidth={1.5} /> HackJudge
-        </div>
+        </Link>
         <div className="flex items-center gap-3">
           <Link href="/login" className="btn-ghost text-sm">Sign In</Link>
           <Link href="/events/new" className="btn-primary text-sm">Create Event</Link>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
+      {/* ─── Hero ─── */}
+      <section className="relative flex flex-col items-center justify-center px-6 py-24 text-center">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{ backgroundImage: 'radial-gradient(circle, var(--fg-default) 1px, transparent 1px)', backgroundSize: '32px 32px' }}
+        />
         <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl border border-bg-border bg-bg-subtle">
           <Hexagon size={30} strokeWidth={1.2} className="text-fg-default" />
         </div>
@@ -90,8 +58,6 @@ function GuestLanding() {
           </Link>
           <Link href="/login" className="btn-secondary min-w-[180px]">Sign in as organizer</Link>
         </div>
-
-        {/* Feature pills */}
         <div className="mt-14 flex flex-wrap items-center justify-center gap-2.5">
           {['PIN-based judge auth', 'Weighted scoring', 'Live progress', 'YAML config', 'Results & leaderboard'].map((f) => (
             <span key={f} className="rounded-full border border-bg-border bg-bg-subtle px-3.5 py-1.5 text-xs text-fg-muted">{f}</span>
@@ -99,129 +65,120 @@ function GuestLanding() {
         </div>
       </section>
 
-      <footer className="border-t border-bg-border px-8 py-5 text-center text-xs text-fg-subtle">
-        HackJudge — Open-source hackathon judging platform
-      </footer>
-    </main>
-  );
-}
-
-/* ═══════════════════════════════════ ORGANIZER HUB ═══════ */
-function OrganizerHub({ events, loading }: { events: EventSummary[]; loading: boolean }) {
-  function signOut() {
-    localStorage.removeItem('token');
-    window.location.reload();
-  }
-
-  return (
-    <main className="min-h-screen bg-bg-base">
-      {/* Top nav */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-bg-border bg-bg-base/95 px-8 py-3.5 backdrop-blur">
-        <div className="flex items-center gap-2 text-sm font-semibold text-fg-default">
-          <Hexagon size={17} strokeWidth={1.5} /> HackJudge
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/events/new" className="btn-primary text-sm">
-            <Plus size={14} /> New Event
-          </Link>
-          <button onClick={signOut} className="flex items-center gap-1.5 text-xs text-fg-subtle hover:text-fg-muted">
-            <LogOut size={13} /> Sign out
-          </button>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-5xl px-6 py-10">
-        {/* Page heading */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-fg-default">My Events</h1>
-            <p className="mt-1 text-sm text-fg-muted">{events.length} event{events.length !== 1 ? 's' : ''} total</p>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-fg-subtle border-t-fg-default" />
-          </div>
-        ) : events.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-bg-border py-24 text-center">
-            <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-bg-border bg-bg-subtle">
-              <Trophy size={24} className="text-fg-subtle" />
+      {/* ─── Stats bar ─── */}
+      <section className="border-y border-bg-border">
+        <div className="grid grid-cols-2 divide-x divide-bg-border md:grid-cols-4">
+          {[
+            { value: '50+', label: 'Events hosted' },
+            { value: '2K+', label: 'Teams judged' },
+            { value: '10K+', label: 'Scores collected' },
+            { value: '<30s', label: 'Results generated' },
+          ].map((s) => (
+            <div key={s.label} className="flex flex-col items-center py-12 text-center">
+              <span className="text-3xl font-semibold tracking-tight text-fg-default sm:text-4xl">{s.value}</span>
+              <span className="mt-1 text-sm text-fg-muted">{s.label}</span>
             </div>
-            <h2 className="text-lg font-semibold text-fg-default">No events yet</h2>
-            <p className="mt-1 text-sm text-fg-muted">Create your first hackathon to get started.</p>
-            <Link href="/events/new" className="btn-primary mt-6">
-              <Plus size={14} /> Create Event
-            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── How it works ─── */}
+      <section className="px-6 py-20">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-12 text-center">
+            <span className="text-xs font-medium uppercase tracking-widest text-fg-subtle">Workflow</span>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-fg-default">From config to results</h2>
           </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {events.map((ev) => {
-              const pct = ev.totalAssignments > 0 ? Math.round((ev.completedSubmissions / ev.totalAssignments) * 100) : 0;
-              return (
-                <div key={ev.slug} className="card flex flex-col p-5 transition-shadow hover:shadow-md">
-                  {/* Card header */}
-                  <div className="mb-3 flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h2 className="truncate text-[15px] font-semibold text-fg-default">{ev.name}</h2>
-                      <p className="mt-0.5 font-mono text-xs text-fg-subtle">{ev.slug}</p>
-                    </div>
-                    {statusBadge(ev.status)}
-                  </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {STEPS.map((s) => (
+              <div key={s.num} className="card p-6">
+                <span className="text-xs font-mono text-fg-subtle">{s.num}</span>
+                <h3 className="mt-3 text-base font-medium text-fg-default">{s.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-fg-muted">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-                  {/* Stats row */}
-                  <div className="mb-4 grid grid-cols-3 gap-2 rounded-lg border border-bg-border bg-bg-subtle p-3 text-center text-xs">
-                    <div>
-                      <div className="flex items-center justify-center gap-1 text-fg-subtle"><Users size={11} /></div>
-                      <p className="mt-0.5 font-semibold text-fg-default">{ev.teams}</p>
-                      <p className="text-fg-subtle">teams</p>
-                    </div>
-                    <div className="border-x border-bg-border">
-                      <div className="flex items-center justify-center gap-1 text-fg-subtle"><BarChart3 size={11} /></div>
-                      <p className="mt-0.5 font-semibold text-fg-default">{ev.judges}</p>
-                      <p className="text-fg-subtle">judges</p>
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-center gap-1 text-fg-subtle"><Trophy size={11} /></div>
-                      <p className="mt-0.5 font-semibold text-fg-default">{pct}%</p>
-                      <p className="text-fg-subtle">done</p>
-                    </div>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="mb-4">
-                    <div className="h-1.5 overflow-hidden rounded-full bg-bg-muted">
-                      <div className={`h-full rounded-full transition-all ${pct === 100 ? 'bg-semantic-success' : 'bg-fg-default'}`} style={{ width: `${pct}%` }} />
-                    </div>
-                    <p className="mt-1 text-right text-xs text-fg-subtle">{ev.completedSubmissions} / {ev.totalAssignments} scored</p>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="mt-auto flex items-center gap-2">
-                    <Link href={`/events/${ev.slug}`} className="btn-primary flex-1 text-center text-xs">
-                      Dashboard
-                    </Link>
-                    <Link href={`/events/${ev.slug}/results`} className="btn-ghost px-3 py-2 text-xs">
-                      <BarChart3 size={13} />
-                    </Link>
-                    <Link href={`/events/${ev.slug}/leaderboard`} className="btn-ghost px-3 py-2 text-xs">
-                      <Trophy size={13} />
-                    </Link>
-                    <Link href={`/events/${ev.slug}/judge`} target="_blank" className="btn-ghost px-3 py-2 text-xs">
-                      <ExternalLink size={13} />
-                    </Link>
-                  </div>
-
-                  {/* Created at */}
-                  <p className="mt-3 flex items-center gap-1 text-xs text-fg-subtle">
-                    <Clock size={10} /> {new Date(ev.createdAt).toLocaleDateString()}
-                  </p>
+      {/* ─── Features ─── */}
+      <section className="border-y border-bg-border bg-bg-subtle px-6 py-20">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-12 text-center">
+            <span className="text-xs font-medium uppercase tracking-widest text-fg-subtle">Features</span>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-fg-default">Everything you need</h2>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((f) => (
+              <div key={f.title} className="card p-6">
+                <div className="mb-4 inline-flex rounded-xl bg-bg-base p-3 text-fg-muted">
+                  <f.icon size={20} />
                 </div>
-              );
-            })}
+                <h3 className="text-base font-medium text-fg-default">{f.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-fg-muted">{f.desc}</p>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      </section>
+
+      {/* ─── Testimonials ─── */}
+      <section className="px-6 py-20">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-12 text-center">
+            <span className="text-xs font-medium uppercase tracking-widest text-fg-subtle">Testimonials</span>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-fg-default">Loved by organizers</h2>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            {[
+              { name: 'Sarah Chen', role: 'HackMIT', text: 'We judged 40 teams across 4 tracks in under an hour. The config saved us a full day of setup.' },
+              { name: 'Marcus Johnson', role: 'MLH Coach', text: 'Magic links are a game changer. Judges just open the link on their phone and start scoring.' },
+              { name: 'Priya Patel', role: 'TechFest Lead', text: 'The outlier detection caught a judge who gave all 10s. Saved us from an unfair result.' },
+            ].map((t) => (
+              <div key={t.name} className="card p-6">
+                <div className="flex gap-0.5 text-semantic-warning">
+                  {[...Array(5)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
+                </div>
+                <p className="mt-3 text-sm leading-relaxed text-fg-muted">&quot;{t.text}&quot;</p>
+                <div className="mt-4 flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-bg-base text-sm font-medium text-fg-default">{t.name.charAt(0)}</div>
+                  <div>
+                    <p className="text-sm font-medium text-fg-default">{t.name}</p>
+                    <p className="text-xs text-fg-subtle">{t.role}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── CTA ─── */}
+      <section className="px-6 py-24 text-center">
+        <h2 className="text-3xl font-semibold tracking-tight text-fg-default sm:text-4xl">
+          Run your first event in 5 minutes.
+        </h2>
+        <p className="mx-auto mt-4 max-w-md text-base text-fg-muted">
+          No setup, no DevOps. Just describe your hackathon and start judging.
+        </p>
+        <Link href="/events/new" className="btn-primary mt-8 inline-flex min-w-[200px]">
+          Create event <ArrowUpRight size={15} />
+        </Link>
+      </section>
+
+      {/* ─── Footer ─── */}
+      <footer className="border-t border-bg-border px-8 py-6">
+        <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 sm:flex-row">
+          <div className="flex items-center gap-2 text-sm font-medium text-fg-default">
+            <Hexagon size={16} strokeWidth={1.5} /> HackJudge
+          </div>
+          <div className="flex items-center gap-6 text-sm text-fg-muted">
+            <Link href="/events/new" className="hover:text-fg-default">Create event</Link>
+            <Link href="/login" className="hover:text-fg-default">Login</Link>
+          </div>
+          <p className="text-xs text-fg-subtle">Open-source hackathon judging platform</p>
+        </div>
+      </footer>
     </main>
   );
 }

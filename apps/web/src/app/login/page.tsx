@@ -26,7 +26,7 @@ export default function LoginPage() {
       const data = await res.json();
       if (data.success) {
         localStorage.setItem('token', data.data.accessToken);
-        const next = new URLSearchParams(window.location.search).get('next') || '/events/new';
+        const next = new URLSearchParams(window.location.search).get('next') || '/home';
         window.location.href = next;
       } else {
         setError(data.error?.message || 'Login failed');
