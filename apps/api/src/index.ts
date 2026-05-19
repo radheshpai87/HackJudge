@@ -23,14 +23,18 @@ import aiRouter from "./routes/ai.js";
 
 dotenv.config();
 
+const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "*";
+
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, { cors: { origin: "*" } });
+const io = new Server(httpServer, {
+  cors: { origin: CORS_ORIGIN, methods: ["GET", "POST"] },
+});
 
 setupWebSocket(io);
 
 app.set("io", io);
-app.use(cors());
+app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
 
