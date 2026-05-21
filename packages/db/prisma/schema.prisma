@@ -10,8 +10,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  email         String    @unique
+  name          String
+  image         String?
+  googleId      String?   @unique @map("google_id")
+  passwordHash  String?   @map("password_hash")
+  role          String    @default("organizer")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  events Event[]
+
+  @@map("users")
+}
+
 model Event {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String?  @map("user_id") @db.ObjectId
   slug       String   @unique
   configJson Json     @map("config_json")
   configHash String   @map("config_hash")
@@ -19,6 +36,7 @@ model Event {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
+  user             User?            @relation(fields: [userId], references: [id])
   tracks           Track[]
   criteria         Criterion[]
   teams            Team[]
@@ -30,6 +48,7 @@ model Event {
   resultSnapshots  ResultSnapshot[]
 
   @@index([status])
+  @@index([userId])
   @@map("events")
 }
 
