@@ -16,7 +16,7 @@ A production-ready hackathon judging platform built as a Turborepo monorepo. Org
 
 ### For Judges
 - **Mobile-first portal** — works on any phone, no app install needed
-- **Magic link auth** — scan QR or open link → enter token → start judging
+- **Magic link auth** — scan QR or open link, enter token, start judging
 - **Numeric & rubric scoring** — supports both free-form scores and structured rubrics
 - **Progress tracking** — see how many teams are left, which are done
 
@@ -27,9 +27,9 @@ A production-ready hackathon judging platform built as a Turborepo monorepo. Org
 | Layer | Tech |
 |---|---|
 | Monorepo | Turborepo + pnpm workspaces |
-| API | Express + TypeScript |
+| Framework | Next.js 14 (App Router) |
+| API | Next.js API Routes |
 | Database | MongoDB Atlas via Prisma |
-| Web | Next.js 14 (App Router) |
 | Styling | Tailwind CSS + Framer Motion |
 | Auth | JWT (organizers) + Magic Links (judges) |
 | Config validation | Zod schema (`packages/config-engine`) |
@@ -40,8 +40,7 @@ A production-ready hackathon judging platform built as a Turborepo monorepo. Org
 
 ```
 apps/
-  api/        Express REST API
-  web/        Next.js organizer dashboard + judge portal
+  web/        Next.js app — organizer dashboard, judge portal, and API routes
 packages/
   db/         Prisma client + schema
   shared/     Shared UI components + utilities
@@ -62,14 +61,25 @@ packages/
 ```bash
 git clone https://github.com/radheshpai87/HackJudge.git
 cd HackJudge
-cp apps/api/.env.example apps/api/.env
-# Add your MongoDB connection string to apps/api/.env
+pnpm install
 ```
 
-Edit `apps/api/.env`:
+Create a `.env` file in the project root:
+
 ```
 DATABASE_URL=mongodb+srv://<user>:<pass>@cluster.mongodb.net/hackjudge
 JWT_SECRET=your-secret-here
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+FROM_EMAIL=your-email@gmail.com
+```
+
+Generate the Prisma client:
+
+```bash
+cd packages/db && pnpm prisma generate && cd ../..
 ```
 
 ### Run
@@ -79,9 +89,8 @@ JWT_SECRET=your-secret-here
 ```
 
 - **Web dashboard:** http://localhost:3000
-- **API:** http://localhost:3001
 - **Judge portal:** http://localhost:3000/events/{slug}/judge
-- **LAN access (for judges on phones):** http://\<your-ip\>:3000/events/{slug}/judge
+- **LAN access (for judges on phones):** http://<your-ip>:3000/events/{slug}/judge
 
 Default organizer login: `organizer@hackjudge.dev` / `hackjudge-demo`
 
@@ -90,7 +99,7 @@ Default organizer login: `organizer@hackjudge.dev` / `hackjudge-demo`
 ## Creating an Event
 
 1. Log in at `/login`
-2. Go to **New Event** → fill in the 7-step wizard:
+2. Go to **New Event** and fill in the 7-step wizard:
    - Event name & description
    - Tracks (categories)
    - Scoring criteria (or pick a preset)
@@ -122,8 +131,8 @@ Bob Judge, bob@example.com
 
 1. Organizer shares magic link or QR code
 2. Judge opens `/events/{slug}/judge?email=...` on phone
-3. Requests magic link → token logged to API console (dev mode)
-4. Enters token → authenticated
+3. Requests magic link — token is logged to the server console in dev mode
+4. Enters token and is authenticated
 5. Scores each assigned team
 6. Portal shows real-time progress
 
@@ -131,17 +140,60 @@ Bob Judge, bob@example.com
 
 ## API Endpoints
 
+All API routes are served by the Next.js App Router under `/api`.
+
 | Method | Path | Description |
 |---|---|---|
-| POST | `/api/v1/auth/login` | Organizer login |
-| POST | `/api/v1/auth/magic-link` | Request judge magic link |
-| GET | `/api/v1/auth/verify/:token` | Verify magic link |
-| POST | `/api/v1/events` | Create event from config |
-| GET | `/api/v1/events/:slug` | Get event config + status |
-| GET | `/api/v1/judges/me` | Judge profile + assignments |
-| POST | `/api/v1/scores` | Submit a score |
-| GET | `/api/v1/events/:slug/results` | Get results + leaderboard |
-| GET | `/api/v1/events/:slug/results/export/xlsx` | Export results as Excel |
+| POST | `/api/auth/login` | Organizer login |
+| POST | `/api/auth/magic-link` | Request judge magic link |
+| GET | `/api/auth/verify` | Verify magic link |
+| POST | `/api/events` | Create event from YAML config |
+| GET | `/api/events/:slug` | Get event config + status |
+| GET | `/api/events/:slug/judges` | List judges |
+| GET | `/api/events/:slug/judges/me` | Judge profile + assignments |
+| POST | `/api/events/:slug/scores/submit` | Submit a score |
+| GET | `/api/events/:slug/results` | Get results + leaderboard |
+| GET | `/api/events/:slug/results/export/xlsx` | Export results as Excel |
+| GET | `/api/events/:slug/results/export/pdf` | Export results as PDF |
+| GET | `/api/events/:slug/results/export/csv` | Export results as CSV |
+
+---
+
+## Deployment
+
+### Vercel (Recommended)
+
+A `vercel.json` is included with the build configuration. Deploy with:
+
+```bash
+vercel
+```
+
+Make sure to add `DATABASE_URL` and `JWT_SECRET` in your Vercel project environment variables.
+
+### Railway / Render / Fly.io
+
+For platforms that run a persistent container, update `railway.toml` (or equivalent) to build and start the Next.js app:
+
+```toml
+[build]
+builder = "NIXPACKS"
+buildCommand = "pnpm install --frozen-lockfile && pnpm --filter @hackjudge/db prisma generate && pnpm turbo build --filter=@hackjudge/web"
+
+[deploy]
+startCommand = "pnpm --filter @hackjudge/web start"
+```
+
+### VPS / Self-Hosted
+
+Build and run directly on any Linux server:
+
+```bash
+pnpm install
+pnpm --filter @hackjudge/db prisma generate
+pnpm turbo build --filter=@hackjudge/web
+pnpm --filter @hackjudge/web start
+```
 
 ---
 
@@ -151,3 +203,9 @@ Results export includes:
 - **Overall** sheet — ranked leaderboard across all tracks
 - **Per-track** sheets — track-specific rankings
 - **Detailed** sheet — criteria score breakdown per team
+
+---
+
+## License
+
+MIT
