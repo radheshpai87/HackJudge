@@ -7,7 +7,8 @@
     "lint": "turbo run lint",
     "db:generate": "pnpm --filter db generate",
     "db:seed": "pnpm --filter db seed",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "postinstall": "pnpm --filter @hackjudge/db generate"
   },
   "devDependencies": {
     "next": "14.2.0",
