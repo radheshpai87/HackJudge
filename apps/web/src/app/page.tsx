@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight, Zap, Shield, BarChart3,
-  Users, Star, ArrowUpRight, CheckCircle, QrCode, FileDown
+  Users, Star, ArrowUpRight, QrCode, FileDown
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
@@ -43,9 +43,6 @@ export default function Home() {
       <section className="relative flex flex-col items-center justify-center px-6 py-28 text-center">
         <div className="pointer-events-none absolute inset-0 opacity-[0.03]"
           style={{ backgroundImage: 'radial-gradient(circle, var(--fg-default) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
-        <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-bg-border bg-bg-subtle px-4 py-1.5 text-xs font-medium text-fg-muted">
-          <CheckCircle size={12} className="text-semantic-success" /> Free &amp; open source
-        </span>
         <h1 className="max-w-2xl text-5xl font-semibold leading-tight tracking-tight text-fg-default">
           Hackathon judging,<br />built for the real world.
         </h1>
