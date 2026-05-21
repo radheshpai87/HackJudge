@@ -1,6 +1,5 @@
 {
+  "framework": "nextjs",
   "buildCommand": "pnpm --filter @hackjudge/db build && pnpm turbo build --filter=@hackjudge/web",
-  "outputDirectory": "apps/web/.next",
-  "installCommand": "pnpm install",
-  "framework": "nextjs"
+  "outputDirectory": "apps/web/.next"
 }
