@@ -95,7 +95,7 @@ ${data.judges.map(j => `  - id: ${j.id}\n    name: ${q(j.name)}\n    email: ${j.
 assignment:
   mode: ${data.assignment.mode}
   assigned_teams:
-${data.assignment.mode !== 'free' ? data.assignment.assigned_teams.map(a => `    - judge_id: ${a.judge_id}\n      team_ids: [${a.team_ids.join(', ')}]`).join('\n') : '    []'}
+${data.assignment.assigned_teams.length > 0 ? data.assignment.assigned_teams.map(a => `    - judge_id: ${a.judge_id}\n      team_ids: [${a.team_ids.join(', ')}]`).join('\n') : '    []'}
   min_judges_per_team: ${data.assignment.min_judges_per_team}
   allow_self_scoring: ${data.assignment.allow_self_scoring}
 moderation:
@@ -178,9 +178,15 @@ export default function NewEventPage() {
       const resp = await res.json();
       if (!resp.success) { setError(resp.error?.message || 'Failed to create event'); setLoading(false); return; }
       const slug = resp.data.slug;
-      const judgesRes = await fetch(`${API}/events/${slug}/judges`, { headers: { Authorization: `Bearer ${orgToken}` } });
-      const jd = await judgesRes.json();
-      setCreated({ slug, eventName: data.event.name, judges: jd.success ? jd.data : [], teamCount: data.teams.length, trackCount: data.tracks.length });
+      let judgesList: any[] = [];
+      try {
+        const judgesRes = await fetch(`${API}/events/${slug}/judges`, { headers: { Authorization: `Bearer ${orgToken}` } });
+        const jd = await judgesRes.json();
+        if (jd.success && Array.isArray(jd.data)) judgesList = jd.data;
+      } catch {
+        // Judges list failed but event was created; show success page anyway
+      }
+      setCreated({ slug, eventName: data.event.name, judges: judgesList, teamCount: data.teams.length, trackCount: data.tracks.length });
     } catch { setError('Network error'); }
     finally { setLoading(false); }
   }
@@ -300,7 +306,7 @@ export default function NewEventPage() {
                 <p className="text-sm text-fg-muted">Add tracks or categories for your hackathon. Every event needs at least one.</p>
                 <BulkImportTracks onImport={tracks => setData(d => ({ ...d, tracks: [...d.tracks, ...tracks] }))} />
                 {data.tracks.map((t, i) => (
-                  <div key={t.id} className="card p-4">
+                  <div key={`track-${i}`} className="card p-4">
                     <div className="mb-3 flex items-center justify-between">
                       <span className="text-xs font-mono text-fg-subtle">{t.id}</span>
                       {data.tracks.length > 1 && <button type="button" onClick={() => setData(d => ({ ...d, tracks: d.tracks.filter(x => x.id !== t.id) }))} className="text-fg-muted hover:text-semantic-error"><Trash2 size={16} /></button>}

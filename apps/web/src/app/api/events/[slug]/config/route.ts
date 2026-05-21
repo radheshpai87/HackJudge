@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { slug: stri
     await prisma.score.deleteMany({ where: { eventId: event.id } });
     await prisma.scoreSubmission.deleteMany({ where: { eventId: event.id } });
     await prisma.assignment.deleteMany({ where: { eventId: event.id } });
-    const jids = (await prisma.judge.findMany({ where: { eventId: event.id }, select: { id: true } })).map(j => j.id);
+    const jids = (await prisma.judge.findMany({ where: { eventId: event.id }, select: { id: true } })).map((j: { id: string }) => j.id);
     if (jids.length > 0) await prisma.judgeTrack.deleteMany({ where: { judgeId: { in: jids } } });
     await prisma.judge.deleteMany({ where: { eventId: event.id } });
     await prisma.team.deleteMany({ where: { eventId: event.id } });
