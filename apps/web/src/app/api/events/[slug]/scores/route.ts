@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@hackjudge/db";
-import { requireAuth, requireJudge } from "@/lib/auth";
+import { requireAuth, requireJudge, requireEventOwner } from "@/lib/auth";
 import { auditLog } from "@/lib/audit-log";
 import { success, apiError } from "@/lib/api-response";
 
@@ -49,8 +49,7 @@ export async function PUT(req: NextRequest, { params }: { params: { slug: string
 }
 
 export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
-  const user = requireAuth(req);
-  if (user.role !== "organizer") return apiError("FORBIDDEN", "Organizer access required", null, 403);
+  const { eventId } = await requireEventOwner(req, params.slug);
   const event = await prisma.event.findUnique({ where: { slug: params.slug } });
   if (!event) return apiError("EVENT_NOT_FOUND", "Event not found", null, 404);
   const scores = await prisma.score.findMany({

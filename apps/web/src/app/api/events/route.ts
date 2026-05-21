@@ -6,8 +6,12 @@ import { auditLog } from "@/lib/audit-log";
 import { success, apiError } from "@/lib/api-response";
 import { z } from "zod";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const user = requireAuth(req);
+  requireOrganizer(user);
+
   const events = await prisma.event.findMany({
+    where: { userId: user.id },
     orderBy: { createdAt: "desc" },
     select: { id: true, slug: true, configJson: true, status: true, createdAt: true },
   });
@@ -35,7 +39,7 @@ export async function POST(req: NextRequest) {
   if (existing) return apiError("SLUG_COLLISION", `Slug '${config.event.slug}' already exists`, null, 409);
 
   const event = await prisma.event.create({
-    data: { slug: config.event.slug, configJson: config as any, configHash: "hash", status: "active" },
+    data: { slug: config.event.slug, userId: user.id, configJson: config as any, configHash: "hash", status: "active" },
   });
 
   const trackMap = new Map<string, string>();

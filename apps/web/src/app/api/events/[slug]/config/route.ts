@@ -1,13 +1,12 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@hackjudge/db";
-import { requireAuth, requireOrganizer } from "@/lib/auth";
+import { requireEventOwner } from "@/lib/auth";
 import { auditLog } from "@/lib/audit-log";
 import { success, apiError } from "@/lib/api-response";
 
 export async function PATCH(req: NextRequest, { params }: { params: { slug: string } }) {
-  const user = requireAuth(req);
-  requireOrganizer(user);
+  const { user, eventId } = await requireEventOwner(req, params.slug);
   const event = await prisma.event.findUnique({ where: { slug: params.slug } });
   if (!event) return apiError("EVENT_NOT_FOUND", "Event not found", null, 404);
 

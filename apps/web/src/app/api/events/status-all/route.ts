@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   requireOrganizer(user);
 
   const events = await prisma.event.findMany({
+    where: { userId: user.id },
     orderBy: { createdAt: "desc" },
     select: { id: true, slug: true, configJson: true, status: true, createdAt: true },
   });

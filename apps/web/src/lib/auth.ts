@@ -1,4 +1,5 @@
 import { verifyAccessToken } from "./jwt";
+import { prisma } from "@hackjudge/db";
 
 export interface AuthUser {
   id: string;
@@ -43,6 +44,23 @@ export function requireJudge(user: AuthUser): AuthUser {
     throw new AuthError("FORBIDDEN", "Judge role required", 403);
   }
   return user;
+}
+
+export async function requireEventOwner(request: Request, eventSlug: string): Promise<{ user: AuthUser; eventId: string }> {
+  const user = requireAuth(request);
+  requireOrganizer(user);
+
+  const event = await prisma.event.findUnique({
+    where: { slug: eventSlug },
+    select: { id: true, userId: true },
+  });
+  if (!event) {
+    throw new AuthError("EVENT_NOT_FOUND", "Event not found", 404);
+  }
+  if (event.userId && event.userId !== user.id) {
+    throw new AuthError("FORBIDDEN", "You do not have access to this event", 403);
+  }
+  return { user, eventId: event.id };
 }
 
 export class AuthError extends Error {

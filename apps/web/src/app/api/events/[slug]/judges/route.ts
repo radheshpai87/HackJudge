@@ -2,17 +2,14 @@ import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@hackjudge/db";
-import { requireAuth, requireOrganizer, requireJudge } from "@/lib/auth";
+import { requireEventOwner } from "@/lib/auth";
 import { success, apiError } from "@/lib/api-response";
 
 // GET /api/events/[slug]/judges
 async function handleList(req: NextRequest, slug: string) {
-  const user = requireAuth(req);
-  requireOrganizer(user);
-  const event = await prisma.event.findUnique({ where: { slug } });
-  if (!event) return apiError("EVENT_NOT_FOUND", "Event not found", null, 404);
+  const { eventId } = await requireEventOwner(req, slug);
   const judges = await prisma.judge.findMany({
-    where: { eventId: event.id },
+    where: { eventId },
     include: { judgeTracks: { include: { track: true } }, scoreSubmissions: true, assignments: true },
   });
   return success(judges.map((j) => ({
@@ -25,15 +22,12 @@ async function handleList(req: NextRequest, slug: string) {
 
 // PUT /api/events/[slug]/judges/[judgeId]/pin
 async function handleSetPin(req: NextRequest, slug: string, judgeId: string) {
-  const user = requireAuth(req);
-  requireOrganizer(user);
+  const { eventId } = await requireEventOwner(req, slug);
   const body = await req.json();
   const schema = z.object({ pin: z.string().min(4).max(12) });
   const parse = schema.safeParse(body);
   if (!parse.success) return apiError("VALIDATION_ERROR", "PIN must be 4–12 characters");
-  const event = await prisma.event.findUnique({ where: { slug } });
-  if (!event) return apiError("EVENT_NOT_FOUND", "Event not found", null, 404);
-  const judge = await prisma.judge.findFirst({ where: { id: judgeId, eventId: event.id } });
+  const judge = await prisma.judge.findFirst({ where: { id: judgeId, eventId } });
   if (!judge) return apiError("JUDGE_NOT_FOUND", "Judge not found", null, 404);
   const hash = await bcrypt.hash(parse.data.pin, 10);
   await prisma.judge.update({ where: { id: judge.id }, data: { passwordHash: hash } });
@@ -42,11 +36,8 @@ async function handleSetPin(req: NextRequest, slug: string, judgeId: string) {
 
 // DELETE /api/events/[slug]/judges/[judgeId]/pin
 async function handleClearPin(req: NextRequest, slug: string, judgeId: string) {
-  const user = requireAuth(req);
-  requireOrganizer(user);
-  const event = await prisma.event.findUnique({ where: { slug } });
-  if (!event) return apiError("EVENT_NOT_FOUND", "Event not found", null, 404);
-  await prisma.judge.updateMany({ where: { id: judgeId, eventId: event.id }, data: { passwordHash: null } });
+  const { eventId } = await requireEventOwner(req, slug);
+  await prisma.judge.updateMany({ where: { id: judgeId, eventId }, data: { passwordHash: null } });
   return success({ cleared: true });
 }
 
