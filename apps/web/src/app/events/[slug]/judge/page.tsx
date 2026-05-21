@@ -178,7 +178,7 @@ function HomeScreen({ judgeState, eventConfig, onSelectTeam, onSignOut }: { judg
             />
           </div>
           {progress.percent === 100
-            ? <p className="mt-2.5 text-center text-xs font-medium text-semantic-success">🎉 All teams scored!</p>
+            ? <p className="mt-2.5 text-center text-xs font-medium text-semantic-success">All teams scored!</p>
             : <p className="mt-2 text-xs text-fg-subtle">{progress.totalAssigned - progress.completed} remaining</p>}
         </div>
 

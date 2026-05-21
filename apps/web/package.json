@@ -12,7 +12,6 @@
   "dependencies": {
     "@hackjudge/config-engine": "workspace:*",
     "@hackjudge/db": "workspace:*",
-    "@hackjudge/shared": "workspace:*",
     "@studio-freight/lenis": "^1.0.42",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
