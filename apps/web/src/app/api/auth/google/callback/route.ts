@@ -3,6 +3,8 @@ import { prisma } from "@hackjudge/db";
 import { signAccessToken, signRefreshToken } from "@/lib/jwt";
 import { success, apiError } from "@/lib/api-response";
 
+export const dynamic = "force-dynamic";
+
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
 
