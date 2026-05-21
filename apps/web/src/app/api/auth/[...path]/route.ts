@@ -1,32 +1,16 @@
 import { NextRequest } from "next/server";
-import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@hackjudge/db";
-import { signAccessToken, signRefreshToken, verifyAccessToken } from "@/lib/jwt";
-import { sendMagicLink } from "@/lib/mailer";
+import { signAccessToken, signRefreshToken } from "@/lib/jwt";
 import { auditLog } from "@/lib/audit-log";
 import { success, apiError } from "@/lib/api-response";
-
-// Stateless magic-link: the token IS a signed JWT with short expiry
-function signMagicToken(payload: { judgeId: string; eventId: string; eventSlug: string }) {
-  const jwt = require("jsonwebtoken");
-  return jwt.sign(payload, process.env.JWT_SECRET || "dev-secret", { expiresIn: "15m" });
-}
-
-function verifyMagicToken(token: string) {
-  const jwt = require("jsonwebtoken");
-  return jwt.verify(token, process.env.JWT_SECRET || "dev-secret") as {
-    judgeId: string; eventId: string; eventSlug: string;
-  };
-}
 
 export async function POST(req: NextRequest) {
   const path = req.nextUrl.pathname.replace("/api/auth/", "");
 
   try {
     switch (path) {
-      case "magic-link": return handleMagicLink(req);
       case "refresh": return handleRefresh(req);
       case "judge-login": return handleJudgeLogin(req);
       case "organizer/login": return handleOrganizerLogin(req);
@@ -37,62 +21,6 @@ export async function POST(req: NextRequest) {
     console.error(e);
     return apiError("INTERNAL_ERROR", e.message || "Internal error", null, 500);
   }
-}
-
-export async function GET(req: NextRequest) {
-  const path = req.nextUrl.pathname.replace("/api/auth/", "");
-
-  try {
-    if (path.startsWith("verify/")) {
-      const token = path.replace("verify/", "");
-      return handleVerify(token);
-    }
-    return apiError("NOT_FOUND", "Route not found", null, 404);
-  } catch (e: any) {
-    console.error(e);
-    return apiError("INTERNAL_ERROR", e.message || "Internal error", null, 500);
-  }
-}
-
-async function handleMagicLink(req: NextRequest) {
-  const body = await req.json();
-  const schema = z.object({ email: z.string().email(), eventSlug: z.string() });
-  const parse = schema.safeParse(body);
-  if (!parse.success) return apiError("VALIDATION_ERROR", "Invalid request", parse.error.format());
-
-  const event = await prisma.event.findUnique({ where: { slug: parse.data.eventSlug } });
-  if (!event) return apiError("EVENT_NOT_FOUND", "Event not found", null, 404);
-
-  const judge = await prisma.judge.findFirst({
-    where: { email: parse.data.email, eventId: event.id },
-  });
-  if (!judge) return apiError("JUDGE_NOT_FOUND", "Judge not found for this event", null, 404);
-
-  const token = signMagicToken({ judgeId: judge.id, eventId: event.id, eventSlug: event.slug });
-  await sendMagicLink(judge.email, token, event.slug);
-  await auditLog(event.id, judge.id, "judge", "magic_link_sent", { email: judge.email });
-
-  return success({ sent: true });
-}
-
-async function handleVerify(token: string) {
-  let decoded;
-  try {
-    decoded = verifyMagicToken(token);
-  } catch {
-    return apiError("INVALID_TOKEN", "Token invalid or expired", null, 401);
-  }
-
-  const judge = await prisma.judge.update({
-    where: { id: decoded.judgeId },
-    data: { lastLoginAt: new Date() },
-  });
-
-  const accessToken = signAccessToken({ judgeId: judge.id, eventId: decoded.eventId, role: "judge" });
-  const refreshToken = signRefreshToken({ judgeId: judge.id, eventId: decoded.eventId, role: "judge" });
-
-  await auditLog(decoded.eventId, decoded.judgeId, "judge", "magic_link_verified", {});
-  return success({ accessToken, refreshToken, eventSlug: decoded.eventSlug });
 }
 
 async function handleRefresh(req: NextRequest) {
