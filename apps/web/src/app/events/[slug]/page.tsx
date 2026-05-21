@@ -5,19 +5,12 @@ import { useParams } from 'next/navigation';
 import { Activity, BarChart3, Users, CheckCircle, QrCode, Copy, ExternalLink, KeyRound, ShieldCheck, Eye, EyeOff, Trophy, Settings } from 'lucide-react';
 import Link from 'next/link';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API = '/api';
 
 function getAppBase() {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
   if (typeof window === 'undefined') return 'http://localhost:3000';
-  const origin = window.location.origin;
-  if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-    try {
-      const apiHost = new URL(API).hostname;
-      if (apiHost !== 'localhost' && apiHost !== '127.0.0.1') return `http://${apiHost}:3000`;
-    } catch { /* fall through */ }
-  }
-  return origin;
+  return window.location.origin;
 }
 
 export default function EventDashboard() {

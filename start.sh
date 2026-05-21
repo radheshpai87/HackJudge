@@ -4,7 +4,6 @@ echo "==================================="
 echo "  HackJudge Local Deploy Script"
 echo "==================================="
 
-API_PORT=3001
 WEB_PORT=3000
 
 # Check deps
@@ -37,18 +36,13 @@ pnpm install
 echo "🔄 Generating Prisma client..."
 cd packages/db && pnpm prisma generate && cd ../..
 
-# Kill any existing processes on these ports first
-fuser -k $WEB_PORT/tcp $API_PORT/tcp 2>/dev/null || true
+# Kill any existing processes on this port first
+fuser -k $WEB_PORT/tcp 2>/dev/null || true
 sleep 1
-
-# Start API (redirect stderr to avoid pnpm exit error noise)
-echo "🔌 Starting API on 0.0.0.0:$API_PORT..."
-HOST=0.0.0.0 pnpm --filter api dev 2>/dev/null &
-API_PID=$!
 
 # Start Web
 echo "🌐 Starting Web on 0.0.0.0:$WEB_PORT..."
-NEXT_PUBLIC_API_URL=http://$LAN_IP:$API_PORT/api/v1 NEXT_PUBLIC_APP_URL=http://$LAN_IP:$WEB_PORT pnpm --filter web dev:lan 2>/dev/null &
+NEXT_PUBLIC_APP_URL=http://$LAN_IP:$WEB_PORT pnpm --filter web dev:lan 2>/dev/null &
 WEB_PID=$!
 
 sleep 3
@@ -60,7 +54,6 @@ echo "==================================="
 echo ""
 echo "  🌍 Web:      http://localhost:$WEB_PORT"
 echo "  🔗 LAN:      http://$LAN_IP:$WEB_PORT"
-echo "  🔌 API:      http://localhost:$API_PORT"
 echo "  🗄️  DB:       MongoDB Atlas (cloud)"
 echo ""
 echo "  📱 Judges:   http://$LAN_IP:$WEB_PORT/events/{slug}/judge"
@@ -76,7 +69,7 @@ cleanup() {
   # Kill child processes by parent PID then port
   pkill -P $$ 2>/dev/null || true
   sleep 0.5
-  fuser -k $WEB_PORT/tcp $API_PORT/tcp 2>/dev/null || true
+  fuser -k $WEB_PORT/tcp 2>/dev/null || true
   echo "   Done."
   exit 0
 }

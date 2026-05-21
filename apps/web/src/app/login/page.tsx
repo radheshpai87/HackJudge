@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Hexagon, ArrowRight } from 'lucide-react';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API = '/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');

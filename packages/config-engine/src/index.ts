@@ -248,7 +248,17 @@ export type ResultsConfig = z.infer<typeof resultsSchema>;
  */
 export async function parseConfig(filePath: string): Promise<EventConfig> {
   const content = await readFile(filePath, "utf-8");
-  const raw = yaml.load(content);
+  return parseConfigFromString(content);
+}
+
+/**
+ * Parse and validate a YAML config string (no file I/O).
+ * @param yamlContent Raw YAML string.
+ * @returns Parsed and validated EventConfig.
+ * @throws ConfigValidationError if validation fails.
+ */
+export function parseConfigFromString(yamlContent: string): EventConfig {
+  const raw = yaml.load(yamlContent);
   const result = validateConfig(raw);
   if (!result.success) {
     throw new ConfigValidationError(result.errors ?? []);

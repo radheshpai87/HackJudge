@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API = '/api';
 
 /* ─── Types ─── */
 interface Track { id: string; name: string; description: string; }
@@ -204,9 +204,7 @@ export default function NewEventPage() {
 
   /* ─── Success ─── */
   if (created) {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-    const appBase = process.env.NEXT_PUBLIC_APP_URL ||
-      (apiBase.includes('localhost') ? window.location.origin : apiBase.replace('/api/v1', '').replace(':3001', ':3000'));
+    const appBase = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
     const portalUrl = `${appBase}/events/${created.slug}/judge`;
     return (
       <main className="page-shell px-6 py-10">

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API = '/api';
 
 interface EventSummary {
   slug: string;

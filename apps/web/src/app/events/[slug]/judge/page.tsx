@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Hexagon, ArrowLeft, ArrowRight, Check, Trophy, LogOut, Pencil, MessageSquare } from 'lucide-react';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API = '/api';
 
 type Screen = 'loading' | 'auth' | 'home' | 'scoring' | 'success';
 interface Team { id: string; name: string; track: string | null; trackId: string | null; tableNumber: string | null; members: string[]; }

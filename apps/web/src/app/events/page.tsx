@@ -15,7 +15,7 @@ interface EventItem {
   createdAt: string;
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API = '/api';
 
 export default function EventsPage() {
   const [events, setEvents] = useState<EventItem[]>([]);

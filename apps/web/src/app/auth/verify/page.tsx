@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Loader2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 
-export default function VerifyPage() {
+function VerifyContent() {
   const params = useSearchParams();
   const [status, setStatus] = useState<'verifying' | 'error'>('verifying');
   const [message, setMessage] = useState('');
@@ -20,7 +20,7 @@ export default function VerifyPage() {
       return;
     }
 
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/auth/verify/${token.trim()}`)
+    fetch(`/api/auth/verify/${token.trim()}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.success) {
@@ -56,5 +56,13 @@ export default function VerifyPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={<main className="page-shell flex min-h-screen items-center justify-center px-6"><div className="text-center"><Loader2 size={36} className="mx-auto mb-4 animate-spin text-fg-muted" /><p className="text-sm text-fg-muted">Loading…</p></div></main>}>
+      <VerifyContent />
+    </Suspense>
   );
 }

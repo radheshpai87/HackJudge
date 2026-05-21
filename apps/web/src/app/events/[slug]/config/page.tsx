@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, Save, Check, Plus, Trash2, AlertTriangle, Users, Tag, ListChecks, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API = '/api';
 
 interface Track { id: string; name: string; description: string; }
 interface Criterion { id: string; name: string; weight: number; max_score: number; track_id: string | null; scoring_type: string; }
