@@ -54,7 +54,7 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
 
   for (const team of teams) {
     const teamScoreList = teamScores.get(team.id) ?? [];
-    const judges = new Set(teamScoreList.map((s) => s.judgeId));
+    const judges = new Set(teamScoreList.map((s: any) => s.judgeId));
     const judgeCount = judges.size;
 
     if (judgeCount === 0) {
@@ -81,15 +81,15 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
       const criterion = critScores[0].criterion;
       const maxScore = criterion.maxScore;
       const weight = Number(criterion.weight);
-      const avgScore = critScores.reduce((sum, s) => sum + Number(s.value), 0) / critScores.length;
+      const avgScore = critScores.reduce((sum: number, s: any) => sum + Number(s.value), 0) / critScores.length;
       const weightedScore = (avgScore / maxScore) * weight * 100;
       totalScore += weightedScore;
 
       criteriaBreakdown.push({ criterionId, criterionName: criterion.name, weightedScore, avgScore, maxScore });
 
-      const values = critScores.map((s) => Number(s.value));
-      const mean = values.reduce((a, b) => a + b, 0) / values.length;
-      const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+      const values = critScores.map((s: any) => Number(s.value));
+      const mean = values.reduce((a: number, b: number) => a + b, 0) / values.length;
+      const variance = values.reduce((sum: number, v: number) => sum + Math.pow(v - mean, 2), 0) / values.length;
       const stdDev = Math.sqrt(variance);
       if (stdDev > 0) {
         for (const s of critScores) {
@@ -111,7 +111,7 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
 
   const trackRankings: Record<string, ComputedTeamResult[]> = {};
   const tracks = await prisma.track.findMany({ where: { eventId } });
-  const trackIds = [...tracks.map((t) => t.id), "null"];
+  const trackIds = [...tracks.map((t: any) => t.id), "null"];
 
   for (const tid of trackIds) {
     const filtered = teamResults.filter((t) => (tid === "null" ? t.trackId === null : t.trackId === tid));

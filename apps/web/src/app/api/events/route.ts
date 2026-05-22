@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "desc" },
     select: { id: true, slug: true, configJson: true, status: true, createdAt: true },
   });
-  const list = events.map((e) => {
+  const list = events.map((e: any) => {
     const cfg = e.configJson as any;
     return { slug: e.slug, name: cfg?.event?.name ?? e.slug, status: e.status, tracks: cfg?.tracks?.length ?? 0, teams: cfg?.teams?.length ?? 0, judges: cfg?.judges?.length ?? 0, createdAt: e.createdAt };
   });

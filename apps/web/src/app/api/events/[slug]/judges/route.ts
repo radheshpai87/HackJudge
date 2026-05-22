@@ -12,9 +12,9 @@ async function handleList(req: NextRequest, slug: string) {
     where: { eventId },
     include: { judgeTracks: { include: { track: true } }, scoreSubmissions: true, assignments: true },
   });
-  return success(judges.map((j) => ({
+  return success(judges.map((j: any) => ({
     id: j.id, name: j.name, email: j.email,
-    tracks: j.judgeTracks.map((jt) => jt.track.name),
+    tracks: j.judgeTracks.map((jt: any) => jt.track.name),
     hasPin: !!j.passwordHash,
     completion: j.assignments.length > 0 ? Math.round((j.scoreSubmissions.length / j.assignments.length) * 100) : 0,
   })));

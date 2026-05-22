@@ -16,6 +16,6 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
 
   return success({
     id: team.id, name: team.name, track: team.track?.name ?? null, tableNumber: team.tableNumber, members: team.members,
-    scores: existingScores.map((s) => ({ criterionId: s.criterionId, criterionName: s.criterion.name, value: s.value })),
+    scores: existingScores.map((s: any) => ({ criterionId: s.criterionId, criterionName: s.criterion.name, value: s.value })),
   });
 }

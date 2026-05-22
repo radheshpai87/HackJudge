@@ -25,14 +25,14 @@ export async function PUT(req: NextRequest, { params }: { params: { slug: string
   if (!team) return apiError("TEAM_NOT_FOUND", "Team not found", null, 404);
 
   const allCriteria = await prisma.criterion.findMany({ where: { eventId: event.id } });
-  const critMap = new Map(allCriteria.map((c) => [c.id, c]));
+  const critMap = new Map<string, any>(allCriteria.map((c: any) => [c.id, c]));
 
   for (const s of scores) {
-    const crit = critMap.get(s.criterionId);
+    const crit: any = critMap.get(s.criterionId);
     if (!crit) return apiError("INVALID_CRITERION", `Unknown criterion: ${s.criterionId}`);
     if (crit.scoringType === "rubric") {
       const rubric = (crit.rubric as any[]) ?? [];
-      if (!rubric.map((r) => r.score).includes(s.value)) return apiError("INVALID_RUBRIC_SCORE", `Score ${s.value} is not valid for '${crit.name}'`);
+      if (!rubric.map((r: any) => r.score).includes(s.value)) return apiError("INVALID_RUBRIC_SCORE", `Score ${s.value} is not valid for '${crit.name}'`);
     } else {
       if (s.value < 0 || s.value > crit.maxScore) return apiError("INVALID_SCORE", `Score ${s.value} out of range for '${crit.name}'`);
     }
@@ -56,6 +56,6 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
     where: { team: { eventId: event.id } },
     include: { judge: true, team: true, criterion: true },
   });
-  return success(scores.map((s) => ({ id: s.id, judge: s.judge.name, team: s.team.name, criterion: s.criterion.name, value: s.value, submittedAt: s.submittedAt })));
+  return success(scores.map((s: any) => ({ id: s.id, judge: s.judge.name, team: s.team.name, criterion: s.criterion.name, value: s.value, submittedAt: s.submittedAt })));
 }
 

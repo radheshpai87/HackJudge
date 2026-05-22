@@ -11,10 +11,10 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   let where: any = { eventId: event.id };
   if (user.role === "judge" && user.eventId === event.id) {
     const judgeTracks = await prisma.judgeTrack.findMany({ where: { judgeId: user.id }, select: { trackId: true } });
-    const trackIds = judgeTracks.map((jt) => jt.trackId);
+    const trackIds = judgeTracks.map((jt: any) => jt.trackId);
     if (trackIds.length > 0) where = { eventId: event.id, OR: [{ trackId: { in: trackIds } }, { trackId: null }] };
   }
 
   const teams = await prisma.team.findMany({ where, include: { track: true } });
-  return success(teams.map((t) => ({ id: t.id, name: t.name, track: t.track?.name ?? null, tableNumber: t.tableNumber, members: t.members })));
+  return success(teams.map((t: any) => ({ id: t.id, name: t.name, track: t.track?.name ?? null, tableNumber: t.tableNumber, members: t.members })));
 }

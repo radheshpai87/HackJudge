@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
     ]);
 
     return success({
-      scores: scores.map((s) => ({ criterionId: s.criterionId, value: s.value })),
+      scores: scores.map((s: any) => ({ criterionId: s.criterionId, value: s.value })),
       notes: (submission as any)?.notes ?? "",
       submitted: !!submission,
     });

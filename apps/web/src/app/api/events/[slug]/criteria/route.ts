@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   const criteria = await prisma.criterion.findMany({
     where: { eventId: event.id }, include: { track: true }, orderBy: { name: "asc" },
   });
-  return success(criteria.map((c) => ({
+  return success(criteria.map((c: any) => ({
     id: c.id, name: c.name, maxScore: c.maxScore, weight: Number(c.weight),
     scoringType: c.scoringType, rubric: c.rubric, trackId: c.trackId, trackName: (c as any).track?.name ?? null,
   })));

@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "desc" },
     select: { id: true, slug: true, configJson: true, status: true, createdAt: true },
   });
-  const list = await Promise.all(events.map(async (e) => {
+  const list = await Promise.all(events.map(async (e: any) => {
     const cfg = e.configJson as any;
     const [teams, judges, submissions, assignments] = await Promise.all([
       prisma.team.count({ where: { eventId: e.id } }),

@@ -29,9 +29,9 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   }
 
   byTeamCriterion.forEach((critScores) => {
-    const values = critScores.map((s) => Number(s.value));
-    const mean = values.reduce((a, b) => a + b, 0) / values.length;
-    const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+    const values = critScores.map((s: any) => Number(s.value));
+    const mean = values.reduce((a: number, b: number) => a + b, 0) / values.length;
+    const variance = values.reduce((sum: number, v: number) => sum + Math.pow(v - mean, 2), 0) / values.length;
     const stdDev = Math.sqrt(variance);
     if (stdDev === 0) return;
     for (const s of critScores) {

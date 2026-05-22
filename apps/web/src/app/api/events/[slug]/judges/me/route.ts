@@ -20,11 +20,11 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
     });
     if (!judge) return apiError("JUDGE_NOT_FOUND", "Judge not found", null, 404);
 
-    const completedTeamIds = judge.scoreSubmissions.map((s) => s.teamId);
+    const completedTeamIds = judge.scoreSubmissions.map((s: any) => s.teamId);
     let teamList: { id: string; name: string; track: string | null; trackId: string | null; tableNumber: string | null; members: string[] }[];
 
     if (judge.assignments.length > 0) {
-      teamList = judge.assignments.map((a) => ({
+      teamList = judge.assignments.map((a: any) => ({
         id: a.team.id,
         name: a.team.name,
         track: a.team.track?.name ?? null,
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
         members: a.team.members as string[],
       }));
     } else {
-      const judgeTrackIds = judge.judgeTracks.map((jt) => jt.trackId);
+      const judgeTrackIds = judge.judgeTracks.map((jt: any) => jt.trackId);
       const allTeams = await prisma.team.findMany({
         where: {
           eventId: event.id,
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
         include: { track: true },
         orderBy: { name: "asc" },
       });
-      teamList = allTeams.map((t) => ({
+      teamList = allTeams.map((t: any) => ({
         id: t.id,
         name: t.name,
         track: (t as any).track?.name ?? null,
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
     const completed = judge.scoreSubmissions.length;
     return success({
       judge: { id: judge.id, name: judge.name, email: judge.email },
-      tracks: judge.judgeTracks.map((jt) => jt.track.name),
+      tracks: judge.judgeTracks.map((jt: any) => jt.track.name),
       assignments: teamList,
       completedTeamIds,
       progress: {
