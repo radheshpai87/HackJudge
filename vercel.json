@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
-  "buildCommand": "pnpm --filter @hackjudge/db build && pnpm turbo build --filter=@hackjudge/web",
+  "buildCommand": "pnpm --filter @hackjudge/db build && pnpm turbo build --filter=@hackjudge/web && node apps/web/scripts/copy-prisma-engine.js",
   "outputDirectory": "apps/web/.next"
 }

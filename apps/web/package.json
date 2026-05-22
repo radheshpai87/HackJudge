@@ -2,12 +2,13 @@
   "name": "@hackjudge/web",
   "version": "1.0.0",
   "scripts": {
-    "build": "next build",
-    "dev": "next dev -p 3000",
-    "dev:lan": "next dev -p 3000 --hostname 0.0.0.0",
+    "build": "prisma generate --schema=../../packages/db/prisma/schema.prisma && next build && node scripts/copy-prisma-engine.js",
+    "dev": "prisma generate --schema=../../packages/db/prisma/schema.prisma && next dev -p 3000",
+    "dev:lan": "prisma generate --schema=../../packages/db/prisma/schema.prisma && next dev -p 3000 --hostname 0.0.0.0",
     "start": "next start -p 3000",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "prisma generate --schema=../../packages/db/prisma/schema.prisma"
   },
   "dependencies": {
     "@hackjudge/config-engine": "workspace:*",
@@ -39,6 +40,7 @@
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",
+    "prisma": "^5.14.0",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.4.0"
   }
