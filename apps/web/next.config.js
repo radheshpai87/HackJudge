@@ -1,3 +1,5 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -5,6 +7,18 @@ const nextConfig = {
     return [
       { source: '/landing', destination: '/', permanent: true },
     ];
+  },
+  experimental: {
+    outputFileTracingRoot: path.join(__dirname, '../../'),
+    outputFileTracingExcludes: {
+      '*': [
+        'node_modules/@swc/core-linux-x64-gnu/**/*',
+        'node_modules/@swc/core-linux-x64-musl/**/*',
+        'node_modules/esbuild/**/*',
+        'node_modules/webpack/**/*',
+        'node_modules/rollup/**/*',
+      ],
+    },
   },
 };
 
