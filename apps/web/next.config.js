@@ -8,6 +8,12 @@ const nextConfig = {
       { source: '/landing', destination: '/', permanent: true },
     ];
   },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals.push('mongodb');
+    }
+    return config;
+  },
   experimental: {
     outputFileTracingRoot: path.join(__dirname, '../../'),
     outputFileTracingExcludes: {
