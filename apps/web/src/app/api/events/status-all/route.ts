@@ -5,14 +5,42 @@ import { success, apiError } from "@/lib/api-response";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = requireAuth(req);
-    requireOrganizer(user);
+    let user;
+    try {
+      user = requireAuth(req);
+    } catch (authErr) {
+      console.error("Auth error:", authErr);
+      if (authErr instanceof AuthError) {
+        return apiError(authErr.code, authErr.message, null, authErr.status);
+      }
+      return apiError("UNAUTHORIZED", "Authentication failed", null, 401);
+    }
 
-    const events = await prisma.event.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, slug: true, configJson: true, status: true, createdAt: true },
-    });
+    try {
+      requireOrganizer(user);
+    } catch (roleErr) {
+      console.error("Role check error:", roleErr);
+      if (roleErr instanceof AuthError) {
+        return apiError(roleErr.code, roleErr.message, null, roleErr.status);
+      }
+      return apiError("FORBIDDEN", "Organizer role required", null, 403);
+    }
+
+    let events;
+    try {
+      events = await prisma.event.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, slug: true, configJson: true, status: true, createdAt: true },
+      });
+    } catch (dbErr) {
+      console.error("Error fetching events:", dbErr);
+      return apiError("DATABASE_ERROR", "Failed to fetch events", null, 500);
+    }
+
+    if (!events || events.length === 0) {
+      return success([]);
+    }
 
     const list = await Promise.all(
       events.map(async (e: any) => {
@@ -73,6 +101,14 @@ export async function GET(req: NextRequest) {
           };
         }
       })
+    );
+    
+    return success(list);
+  } catch (error) {
+    console.error("Status-all endpoint error:", error instanceof Error ? { message: error.message, stack: error.stack } : error);
+    return apiError("INTERNAL_ERROR", "Failed to fetch event statuses", null, 500);
+  }
+}
     );
     
     return success(list);
