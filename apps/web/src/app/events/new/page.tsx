@@ -312,7 +312,7 @@ export default function NewEventPage() {
                       {data.tracks.length > 1 && <button type="button" onClick={() => setData(d => ({ ...d, tracks: d.tracks.filter(x => x.id !== t.id) }))} className="text-fg-muted hover:text-semantic-error"><Trash2 size={16} /></button>}
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <input className="input" placeholder="Track name" value={t.name} onChange={e => { const v = e.target.value; setData(d => ({ ...d, tracks: d.tracks.map((x, idx) => idx === i ? { ...x, name: v, id: x.id.startsWith('track_') ? slugify(v).replace(/-/g, '_') || x.id : x.id } : x) })); }} />
+                      <input className="input" placeholder="Track name" value={t.name} onChange={e => { const v = e.target.value; const newId = slugify(v).replace(/-/g, '_') || t.id; setData(d => ({ ...d, tracks: d.tracks.map((x, idx) => idx === i ? { ...x, name: v, id: newId } : x) })); }} />
                       <input className="input" placeholder="Description" value={t.description} onChange={e => setData(d => ({ ...d, tracks: d.tracks.map((x, idx) => idx === i ? { ...x, description: e.target.value } : x) }))} />
                     </div>
                   </div>
