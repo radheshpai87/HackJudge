@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import { prisma } from "@hackjudge/db";
 import { requireAuth, requireOrganizer, AuthError } from "@/lib/auth";
 import { success, apiError } from "@/lib/api-response";
-import { ObjectId } from "mongodb";
 
 export async function GET(req: NextRequest) {
   try {
@@ -46,78 +45,54 @@ export async function GET(req: NextRequest) {
       return success([]);
     }
 
-    // Batch aggregation: get counts grouped by eventId to avoid N+4 queries
-    const eventIds = events.map(e => new ObjectId(e.id));
-    
-    let teamCounts: Record<string, number> = {};
-    let judgeCounts: Record<string, number> = {};
-    let submissionCounts: Record<string, number> = {};
-    let assignmentCounts: Record<string, number> = {};
+    // Fetch counts in parallel with graceful degradation
+    const countQueries = Promise.all(
+      events.map(async (e: any) => {
+        try {
+          const counts = await Promise.all([
+            prisma.team.count({ where: { eventId: e.id } }).catch(() => 0),
+            prisma.judge.count({ where: { eventId: e.id } }).catch(() => 0),
+            prisma.scoreSubmission.count({ where: { eventId: e.id } }).catch(() => 0),
+            prisma.assignment.count({ where: { eventId: e.id } }).catch(() => 0),
+          ]);
+          return { eventId: e.id, counts };
+        } catch (err) {
+          console.warn(`Failed to fetch counts for event ${e.id}:`, err);
+          return { eventId: e.id, counts: [0, 0, 0, 0] };
+        }
+      })
+    );
 
+    let eventCounts: Record<string, number[]> = {};
     try {
-      // Batch count teams by eventId
-      const teamResults = await prisma.team.aggregateRaw({
-        pipeline: [
-          { $match: { eventId: { $in: eventIds } } },
-          { $group: { _id: "$eventId", count: { $sum: 1 } } },
-        ],
+      const results = await countQueries;
+      results.forEach((r: any) => {
+        eventCounts[r.eventId] = r.counts;
       });
-      teamResults.forEach((r: any) => {
-        teamCounts[r._id.toString()] = r.count;
+    } catch (err) {
+      console.error("Error fetching event counts:", err);
+      // Continue with zero counts
+      events.forEach((e: any) => {
+        eventCounts[e.id] = [0, 0, 0, 0];
       });
-
-      // Batch count judges by eventId
-      const judgeResults = await prisma.judge.aggregateRaw({
-        pipeline: [
-          { $match: { eventId: { $in: eventIds } } },
-          { $group: { _id: "$eventId", count: { $sum: 1 } } },
-        ],
-      });
-      judgeResults.forEach((r: any) => {
-        judgeCounts[r._id.toString()] = r.count;
-      });
-
-      // Batch count submissions by eventId
-      const submissionResults = await prisma.scoreSubmission.aggregateRaw({
-        pipeline: [
-          { $match: { eventId: { $in: eventIds } } },
-          { $group: { _id: "$eventId", count: { $sum: 1 } } },
-        ],
-      });
-      submissionResults.forEach((r: any) => {
-        submissionCounts[r._id.toString()] = r.count;
-      });
-
-      // Batch count assignments by eventId
-      const assignmentResults = await prisma.assignment.aggregateRaw({
-        pipeline: [
-          { $match: { eventId: { $in: eventIds } } },
-          { $group: { _id: "$eventId", count: { $sum: 1 } } },
-        ],
-      });
-      assignmentResults.forEach((r: any) => {
-        assignmentCounts[r._id.toString()] = r.count;
-      });
-    } catch (aggError) {
-      console.error("Aggregation error:", aggError);
-      // Fallback to empty counts
     }
 
-    // Build response using pre-aggregated counts
+    // Build response
     const list = events.map((e: any) => {
       const cfg = e.configJson as any;
+      const [teams, judges, submissions, assignments] = eventCounts[e.id] || [0, 0, 0, 0];
       return {
         slug: e.slug,
         name: cfg?.event?.name ?? e.slug,
         status: "open",
-        teams: teamCounts[e.id] ?? 0,
-        judges: judgeCounts[e.id] ?? 0,
-        completedSubmissions: submissionCounts[e.id] ?? 0,
-        totalAssignments: assignmentCounts[e.id] ?? 0,
+        teams,
+        judges,
+        completedSubmissions: submissions,
+        totalAssignments: assignments,
         createdAt: e.createdAt,
       };
     });
-    
+
     return success(list);
   } catch (error) {
     console.error("Status-all endpoint error:", error instanceof Error ? { message: error.message, stack: error.stack } : error);
