@@ -7,8 +7,12 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    // Ensure DB connection is initialized
-    await prisma.$connect?.();
+    // Ensure DB connection is initialized before auth checks
+    try {
+      await prisma.$connect?.();
+    } catch (_) {
+      // Connection may already be established
+    }
     
     let user;
     try {

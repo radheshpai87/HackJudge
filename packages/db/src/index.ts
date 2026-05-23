@@ -39,7 +39,7 @@ function toObjectId(val: string | ObjectId | undefined): ObjectId | undefined {
 }
 
 async function buildWhere(filter: Record<string, any>): Promise<Filter<Document>> {
-  const db = getDb();
+  const db = _db ?? await connect();
   const out: Filter<Document> = {};
   for (const [k, v] of Object.entries(filter)) {
     // Logical operators
@@ -145,7 +145,7 @@ class CollectionProxy {
   constructor(private col: Collection<Document>) {}
 
   private async applyInclude(result: any, include: Record<string, any>): Promise<void> {
-    const db = getDb();
+    const db = _db ?? await connect();
     for (const [relName, relConfig] of Object.entries(include)) {
       if (relConfig === false) continue;
       if (relName === "track") {

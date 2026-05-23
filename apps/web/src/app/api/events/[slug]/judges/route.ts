@@ -25,8 +25,8 @@ async function handleList(req: NextRequest, slug: string) {
     if (err instanceof AuthError) {
       throw err;
     }
-    console.error("Error fetching judges:", err);
-    throw new Error("Failed to fetch judges");
+    console.error("Error fetching judges:", err instanceof Error ? err.message : err);
+    throw err;  // Re-throw original error to preserve details
   }
 }
 
@@ -47,8 +47,8 @@ async function handleSetPin(req: NextRequest, slug: string, judgeId: string) {
     if (err instanceof AuthError) {
       throw err;
     }
-    console.error("Error setting judge PIN:", err);
-    throw new Error("Failed to set judge PIN");
+    console.error("Error setting judge PIN:", err instanceof Error ? err.message : err);
+    throw err;
   }
 }
 
@@ -62,8 +62,8 @@ async function handleClearPin(req: NextRequest, slug: string, judgeId: string) {
     if (err instanceof AuthError) {
       throw err;
     }
-    console.error("Error clearing judge PIN:", err);
-    throw new Error("Failed to clear judge PIN");
+    console.error("Error clearing judge PIN:", err instanceof Error ? err.message : err);
+    throw err;
   }
 }
 
