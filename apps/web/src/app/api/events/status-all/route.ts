@@ -109,14 +109,3 @@ export async function GET(req: NextRequest) {
     return apiError("INTERNAL_ERROR", "Failed to fetch event statuses", null, 500);
   }
 }
-    );
-    
-    return success(list);
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return apiError(error.code, error.message, null, error.status);
-    }
-    console.error("Status-all endpoint error:", error instanceof Error ? { message: error.message, stack: error.stack } : error);
-    return apiError("INTERNAL_ERROR", "Failed to fetch event statuses", null, 500);
-  }
-}
