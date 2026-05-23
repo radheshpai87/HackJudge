@@ -101,7 +101,7 @@ class CollectionProxy {
     include?: Record<string, any>;
   }): Promise<any[]> {
     const filter = args?.where ? buildWhere(args.where) : {};
-    let cursor = this.col.find(filter);
+    let cursor = await this.col.find(filter);
     if (args?.orderBy) {
       const order: Record<string, 1 | -1> = {};
       const list = Array.isArray(args.orderBy) ? args.orderBy : [args.orderBy];
@@ -175,7 +175,7 @@ class CollectionProxy {
   }
 
   async aggregateRaw(args: { pipeline: any[] }): Promise<any> {
-    return this.col.aggregate(args.pipeline).toArray();
+    return (await this.col.aggregate(args.pipeline)).toArray();
   }
 }
 
