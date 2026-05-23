@@ -9,9 +9,6 @@ const nextConfig = {
     ];
   },
   webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.externals.push('mongodb');
-    }
     return config;
   },
   experimental: {
