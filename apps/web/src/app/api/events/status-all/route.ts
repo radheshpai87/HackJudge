@@ -69,7 +69,8 @@ export async function GET(req: NextRequest) {
           }
           
           try {
-            assignments = await prisma.assignment.count({ where: { team: { eventId: e.id } } });
+            // Count assignments without complex nested query - just count by eventId
+            assignments = await prisma.assignment.count({ where: { eventId: e.id } });
           } catch (err) {
             console.warn(`Failed to count assignments for event ${e.id}:`, err);
           }
