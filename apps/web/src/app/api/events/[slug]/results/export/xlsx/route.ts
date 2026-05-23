@@ -1,32 +1,33 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@hackjudge/db";
-import { requireEventOwner } from "@/lib/auth";
+import { requireEventOwner, AuthError } from "@/lib/auth";
 import { computeResults } from "@/lib/results-engine";
 import { apiError } from "@/lib/api-response";
 
 export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
-  const { eventId } = await requireEventOwner(req, params.slug);
-  const event = await prisma.event.findUnique({ where: { slug: params.slug } });
-  if (!event) return apiError("EVENT_NOT_FOUND", "Event not found", null, 404);
+  try {
+    const { eventId } = await requireEventOwner(req, params.slug);
+    const event = await prisma.event.findUnique({ where: { slug: params.slug } });
+    if (!event) return apiError("EVENT_NOT_FOUND", "Event not found", null, 404);
 
-  const ExcelJS = await import("exceljs");
-  const workbook = new ExcelJS.Workbook();
+    const ExcelJS = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
 
-  const snapshot = await prisma.resultSnapshot.findFirst({ where: { eventId: event.id }, orderBy: { generatedAt: "desc" } });
-  let data: Awaited<ReturnType<typeof computeResults>>;
-  if (snapshot) { data = snapshot.data as any; }
-  else { data = await computeResults(event.id); }
+    const snapshot = await prisma.resultSnapshot.findFirst({ where: { eventId: event.id }, orderBy: { generatedAt: "desc" } });
+    let data: Awaited<ReturnType<typeof computeResults>>;
+    if (snapshot) { data = snapshot.data as any; }
+    else { data = await computeResults(event.id); }
 
-  const overallSheet = workbook.addWorksheet("Overall");
-  overallSheet.columns = [
-    { header: "Rank", key: "rank", width: 8 }, { header: "Team", key: "teamName", width: 30 },
-    { header: "Score", key: "score", width: 12 }, { header: "Judges", key: "judgeCount", width: 10 },
-    { header: "Track", key: "trackName", width: 20 },
-  ];
-  overallSheet.getRow(1).font = { bold: true };
-  data.overallRanking.forEach((team, idx) => {
-    overallSheet.addRow({ rank: idx + 1, teamName: team.teamName, score: team.score ?? "N/A", judgeCount: team.judgeCount, trackName: team.trackName ?? "Overall" });
-  });
+    const overallSheet = workbook.addWorksheet("Overall");
+    overallSheet.columns = [
+      { header: "Rank", key: "rank", width: 8 }, { header: "Team", key: "teamName", width: 30 },
+      { header: "Score", key: "score", width: 12 }, { header: "Judges", key: "judgeCount", width: 10 },
+      { header: "Track", key: "trackName", width: 20 },
+    ];
+    overallSheet.getRow(1).font = { bold: true };
+    data.overallRanking.forEach((team, idx) => {
+      overallSheet.addRow({ rank: idx + 1, teamName: team.teamName, score: team.score ?? "N/A", judgeCount: team.judgeCount, trackName: team.trackName ?? "Overall" });
+    });
 
   for (const [trackId, teams] of Object.entries(data.trackRankings)) {
     const trackName = trackId === "overall" ? "Overall" : (teams as any[])[0]?.trackName ?? trackId;
@@ -57,4 +58,11 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   return new Response(buf as any, {
     headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="${params.slug}-results.xlsx"` },
   });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return apiError(error.code, error.message, null, error.status);
+    }
+    console.error("XLSX export error:", error);
+    return apiError("INTERNAL_ERROR", "Failed to export XLSX", null, 500);
+  }
 }
