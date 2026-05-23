@@ -5,6 +5,8 @@ import { prisma } from "@hackjudge/db";
 import { requireEventOwner, AuthError } from "@/lib/auth";
 import { success, apiError } from "@/lib/api-response";
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/events/[slug]/judges
 async function handleList(req: NextRequest, slug: string) {
   try {

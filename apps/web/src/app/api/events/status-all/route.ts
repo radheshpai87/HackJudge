@@ -3,6 +3,8 @@ import { prisma } from "@hackjudge/db";
 import { requireAuth, requireOrganizer, AuthError } from "@/lib/auth";
 import { success, apiError } from "@/lib/api-response";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     // Ensure DB connection is initialized

@@ -3,6 +3,8 @@ import { prisma } from "@hackjudge/db";
 import { parseConfigFromString, ConfigValidationError } from "@hackjudge/config-engine";
 import { requireAuth, requireOrganizer, AuthError } from "@/lib/auth";
 import { auditLog } from "@/lib/audit-log";
+
+export const dynamic = 'force-dynamic';
 import { success, apiError } from "@/lib/api-response";
 import { z } from "zod";
 

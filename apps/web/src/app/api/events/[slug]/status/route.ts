@@ -3,6 +3,8 @@ import { prisma } from "@hackjudge/db";
 import { success, apiError } from "@/lib/api-response";
 import { AuthError } from "@/lib/auth";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
   try {
     const event = await prisma.event.findUnique({ where: { slug: params.slug } });

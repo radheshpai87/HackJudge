@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@hackjudge/db";
 import { requireAuth, requireJudge } from "@/lib/auth";
+
+export const dynamic = 'force-dynamic';
 import { success, apiError } from "@/lib/api-response";
 
 export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
