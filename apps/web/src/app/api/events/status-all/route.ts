@@ -3,8 +3,17 @@ import { prisma } from "@hackjudge/db";
 import { requireAuth, requireOrganizer, AuthError } from "@/lib/auth";
 import { success, apiError } from "@/lib/api-response";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
+    // Ensure DB connection is initialized before auth checks
+    try {
+      await prisma.$connect?.();
+    } catch (_) {
+      // Connection may already be established
+    }
+    
     let user;
     try {
       user = requireAuth(req);
@@ -42,67 +51,54 @@ export async function GET(req: NextRequest) {
       return success([]);
     }
 
-    const list = await Promise.all(
+    // Fetch counts in parallel with graceful degradation
+    const countQueries = Promise.all(
       events.map(async (e: any) => {
         try {
-          const cfg = e.configJson as any;
-          
-          // Count with individual try-catch to prevent one failure from blocking all
-          let teams = 0, judges = 0, submissions = 0, assignments = 0;
-          
-          try {
-            teams = await prisma.team.count({ where: { eventId: e.id } });
-          } catch (err) {
-            console.warn(`Failed to count teams for event ${e.id}:`, err);
-          }
-          
-          try {
-            judges = await prisma.judge.count({ where: { eventId: e.id } });
-          } catch (err) {
-            console.warn(`Failed to count judges for event ${e.id}:`, err);
-          }
-          
-          try {
-            submissions = await prisma.scoreSubmission.count({ where: { eventId: e.id } });
-          } catch (err) {
-            console.warn(`Failed to count submissions for event ${e.id}:`, err);
-          }
-          
-          try {
-            assignments = await prisma.assignment.count({ where: { team: { eventId: e.id } } });
-          } catch (err) {
-            console.warn(`Failed to count assignments for event ${e.id}:`, err);
-          }
-          
-          return { 
-            slug: e.slug, 
-            name: cfg?.event?.name ?? e.slug, 
-            status: "open", 
-            teams, 
-            judges, 
-            completedSubmissions: submissions, 
-            totalAssignments: assignments, 
-            createdAt: e.createdAt 
-          };
-        } catch (eventError) {
-          console.error(`Error processing event ${e.id}:`, eventError);
-          // Return minimal data instead of failing entire request
-          const cfg = e.configJson as any;
-          return { 
-            slug: e.slug, 
-            name: cfg?.event?.name ?? e.slug, 
-            status: "open", 
-            teams: 0, 
-            judges: 0, 
-            completedSubmissions: 0, 
-            totalAssignments: 0, 
-            createdAt: e.createdAt,
-            error: "Failed to fetch counts"
-          };
+          const counts = await Promise.all([
+            prisma.team.count({ where: { eventId: e.id } }).catch(() => 0),
+            prisma.judge.count({ where: { eventId: e.id } }).catch(() => 0),
+            prisma.scoreSubmission.count({ where: { eventId: e.id } }).catch(() => 0),
+            prisma.assignment.count({ where: { eventId: e.id } }).catch(() => 0),
+          ]);
+          return { eventId: e.id, counts };
+        } catch (err) {
+          console.warn(`Failed to fetch counts for event ${e.id}:`, err);
+          return { eventId: e.id, counts: [0, 0, 0, 0] };
         }
       })
     );
-    
+
+    let eventCounts: Record<string, number[]> = {};
+    try {
+      const results = await countQueries;
+      results.forEach((r: any) => {
+        eventCounts[r.eventId] = r.counts;
+      });
+    } catch (err) {
+      console.error("Error fetching event counts:", err);
+      // Continue with zero counts
+      events.forEach((e: any) => {
+        eventCounts[e.id] = [0, 0, 0, 0];
+      });
+    }
+
+    // Build response
+    const list = events.map((e: any) => {
+      const cfg = e.configJson as any;
+      const [teams, judges, submissions, assignments] = eventCounts[e.id] || [0, 0, 0, 0];
+      return {
+        slug: e.slug,
+        name: cfg?.event?.name ?? e.slug,
+        status: "open",
+        teams,
+        judges,
+        completedSubmissions: submissions,
+        totalAssignments: assignments,
+        createdAt: e.createdAt,
+      };
+    });
+
     return success(list);
   } catch (error) {
     console.error("Status-all endpoint error:", error instanceof Error ? { message: error.message, stack: error.stack } : error);

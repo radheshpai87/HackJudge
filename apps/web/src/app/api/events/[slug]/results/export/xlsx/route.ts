@@ -4,6 +4,8 @@ import { requireEventOwner, AuthError } from "@/lib/auth";
 import { computeResults } from "@/lib/results-engine";
 import { apiError } from "@/lib/api-response";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
   try {
     const { eventId } = await requireEventOwner(req, params.slug);

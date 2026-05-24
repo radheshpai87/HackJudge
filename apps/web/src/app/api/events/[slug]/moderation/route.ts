@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@hackjudge/db";
 import { requireEventOwner, AuthError } from "@/lib/auth";
-import { success, apiError } from "@/lib/api-response";
+export const dynamic = 'force-dynamic';import { success, apiError } from "@/lib/api-response";
 
 export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
   try {

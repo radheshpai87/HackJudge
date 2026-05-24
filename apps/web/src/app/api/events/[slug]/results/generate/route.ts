@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@hackjudge/db";
 import { requireEventOwner, AuthError } from "@/lib/auth";
+
+export const dynamic = 'force-dynamic';
 import { computeResults } from "@/lib/results-engine";
 import { success, apiError } from "@/lib/api-response";
 
