@@ -337,6 +337,7 @@ export default function NewEventPage() {
             {step === 2 && (
               <div className="space-y-4">
                 <p className="text-sm text-fg-muted">Define how teams are scored. Weights auto-normalize per track.</p>
+                <BulkImportCriteria tracks={data.tracks} onImport={criteria => setData(d => ({ ...d, criteria: normalizeWeights([...d.criteria, ...criteria]) }))} />
                 {data.criteria.length === 0 && (
                   <div className="card p-5">
                     <div className="mb-3 flex items-center gap-2">
@@ -905,3 +906,208 @@ function BulkImportJudges({ tracks, onImport }: { tracks: Track[]; onImport: (ju
   );
 }
 
+/* ─── Bulk Import: Criteria ─── */
+function BulkImportCriteria({ tracks, onImport }: { tracks: Track[]; onImport: (criteria: Criterion[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<'paste' | 'file'>('paste');
+  const [csv, setCsv] = useState('');
+  const [preview, setPreview] = useState<Criterion[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [fileName, setFileName] = useState('');
+
+  const DEFAULT_RUBRIC_LABELS: Record<number, string[]> = {
+    2: ['Poor', 'Excellent'],
+    3: ['Poor', 'Good', 'Excellent'],
+    4: ['Poor', 'Fair', 'Good', 'Excellent'],
+    5: ['Poor', 'Below Average', 'Average', 'Good', 'Excellent'],
+    6: ['Poor', 'Below Average', 'Average', 'Good', 'Very Good', 'Excellent'],
+  };
+
+  function autoRubric(maxScore: number): { score: number; label: string; description: string }[] {
+    const labels = DEFAULT_RUBRIC_LABELS[maxScore] ?? Array.from({ length: maxScore }, (_, i) => `Level ${i + 1}`);
+    return labels.map((label, i) => ({ score: i + 1, label, description: '' }));
+  }
+
+  function findTrack(trackName: string) {
+    if (!trackName) return null;
+    const tn = trackName.toLowerCase().trim();
+    if (!tn) return null;
+    return (
+      tracks.find(t => t.name.toLowerCase() === tn)?.id ??
+      tracks.find(t => t.name.toLowerCase().includes(tn) || tn.includes(t.name.toLowerCase()))?.id ??
+      null
+    );
+  }
+
+  function parseRubric(raw: string): { score: number; label: string; description: string }[] | null {
+    if (!raw || !raw.trim()) return null;
+    const pairs = raw.split(';').map(s => s.trim()).filter(Boolean);
+    const levels: { score: number; label: string; description: string }[] = [];
+    for (const pair of pairs) {
+      const colonIdx = pair.indexOf(':');
+      if (colonIdx < 0) continue;
+      const scorePart = pair.slice(0, colonIdx).trim();
+      const labelPart = pair.slice(colonIdx + 1).trim();
+      const score = parseInt(scorePart, 10);
+      if (isNaN(score) || !labelPart) continue;
+      levels.push({ score, label: labelPart, description: '' });
+    }
+    return levels.length > 0 ? levels.sort((a, b) => a.score - b.score) : null;
+  }
+
+  function parseText(text: string) {
+    const lines = text.trim().split('\n').filter(Boolean);
+    if (lines.length === 0) { setPreview([]); setWarnings([]); return; }
+
+    const start = /^(criterion|criteria|name|criterion.?name)/i.test(lines[0]?.split(',')[0]?.trim().replace(/^"|"$/g, '') ?? '') ? 1 : 0;
+    const warns: string[] = [];
+    const parsed: Criterion[] = [];
+
+    for (let li = start; li < lines.length; li++) {
+      const rowNum = li + 1;
+      const cols = lines[li].split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+      const [name = '', description = '', maxScoreRaw = '', scoringTypeRaw = '', trackName = '', rubricRaw = ''] = cols;
+
+      // Skip empty rows
+      if (!name.trim()) {
+        warns.push(`Row ${rowNum}: Skipped — no name provided`);
+        continue;
+      }
+
+      // Parse max_score
+      let max_score = parseInt(maxScoreRaw, 10);
+      if (isNaN(max_score) || max_score <= 0) {
+        max_score = 10;
+        if (maxScoreRaw.trim()) warns.push(`Row ${rowNum}: "${name}" — invalid max score "${maxScoreRaw}", defaulting to 10`);
+      }
+
+      // Parse scoring_type
+      const stNorm = scoringTypeRaw.toLowerCase().trim();
+      let scoring_type: 'numeric' | 'rubric' = 'numeric';
+      if (stNorm === 'rubric') {
+        scoring_type = 'rubric';
+      } else if (stNorm && stNorm !== 'numeric') {
+        warns.push(`Row ${rowNum}: "${name}" — scoring type "${scoringTypeRaw}" not recognized, defaulting to numeric`);
+      }
+
+      // Parse track
+      const track_id = findTrack(trackName);
+      if (trackName.trim() && !track_id) {
+        warns.push(`Row ${rowNum}: "${name}" — track "${trackName}" not found, assigning to all tracks`);
+      }
+
+      // Parse rubric
+      let rubric: { score: number; label: string; description: string }[] = [];
+      if (scoring_type === 'rubric') {
+        const parsed_rubric = parseRubric(rubricRaw);
+        if (parsed_rubric) {
+          rubric = parsed_rubric;
+        } else {
+          rubric = autoRubric(max_score);
+          warns.push(`Row ${rowNum}: "${name}" — rubric type but no levels provided, auto-generated ${rubric.length} levels`);
+        }
+      }
+
+      parsed.push({
+        id: uid('crit'),
+        name: name.trim(),
+        description: description.trim(),
+        max_score,
+        weight: 0,
+        track_id,
+        scoring_type,
+        rubric,
+      });
+    }
+
+    setPreview(parsed);
+    setWarnings(warns);
+  }
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = ev => { const text = ev.target?.result as string; setCsv(text); parseText(text); };
+    reader.readAsText(file);
+  }
+
+  function reset() { setOpen(false); setCsv(''); setPreview([]); setWarnings([]); setFileName(''); }
+
+  if (!open) return (
+    <button type="button" onClick={() => setOpen(true)} className="btn-ghost w-full justify-center text-xs text-fg-subtle">
+      <Upload size={14} /> Bulk import criteria
+    </button>
+  );
+
+  return (
+    <div className="card p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-medium text-fg-default">Bulk Import Criteria</p>
+        <button type="button" onClick={reset} className="text-xs text-fg-muted">Cancel</button>
+      </div>
+      <p className="mb-1 text-xs text-fg-subtle">Format: <code className="font-mono">Name, Description, Max Score, Scoring Type, Track, Rubric</code></p>
+      <p className="mb-2 text-xs text-fg-subtle">Rubric format: <code className="font-mono">1:Poor;2:Fair;3:Good;4:Excellent</code></p>
+      {/* Tabs */}
+      <div className="mb-3 flex gap-1 rounded-lg border border-bg-border bg-bg-muted p-0.5">
+        {(['paste', 'file'] as const).map(t => (
+          <button type="button" key={t} onClick={() => setTab(t)}
+            className={`flex-1 rounded-md py-1 text-xs font-medium transition-colors ${tab === t ? 'bg-bg-base text-fg-default shadow-sm' : 'text-fg-subtle hover:text-fg-muted'}`}>
+            {t === 'paste' ? 'Paste CSV' : 'Upload File'}
+          </button>
+        ))}
+      </div>
+      {tab === 'paste' ? (
+        <textarea className="input mb-3 h-32 w-full resize-none font-mono text-xs"
+          placeholder={"Innovation, Originality and creativity, 10, numeric, AI Track\nTechnical Depth, Quality of implementation, 10, numeric\nUX Design, User experience quality, 4, rubric, , 1:Poor;2:Fair;3:Good;4:Excellent"}
+          value={csv} onChange={e => { setCsv(e.target.value); parseText(e.target.value); }} />
+      ) : (
+        <label className="mb-3 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-bg-border bg-bg-subtle py-6 text-xs text-fg-muted transition-colors hover:border-fg-muted/30 hover:bg-bg-muted">
+          <Upload size={18} className="text-fg-subtle" />
+          {fileName ? <span className="font-mono text-fg-default">{fileName}</span> : <span>Click to choose a .csv file</span>}
+          <input type="file" accept=".csv,text/csv" className="hidden" onChange={onFileChange} />
+        </label>
+      )}
+      {/* Warnings */}
+      {warnings.length > 0 && (
+        <div className="mb-3 space-y-1">
+          {warnings.map((w, i) => (
+            <div key={i} className="flex items-start gap-2 rounded-md bg-amber-500/10 px-3 py-1.5 text-2xs text-amber-400">
+              <AlertTriangle size={12} className="mt-0.5 flex-shrink-0" /> {w}
+            </div>
+          ))}
+        </div>
+      )}
+      {/* Preview */}
+      {preview.length > 0 && (
+        <div className="mb-3">
+          <p className="mb-1 text-xs text-fg-muted">{preview.length} criterion{preview.length !== 1 ? 'a' : ''} detected:</p>
+          <div className="space-y-1.5">
+            {preview.map(c => (
+              <div key={c.id} className="flex items-center justify-between rounded-lg bg-bg-muted px-3 py-2">
+                <div>
+                  <p className="text-xs font-medium text-fg-default">{c.name}</p>
+                  {c.description && <p className="text-2xs text-fg-subtle">{c.description}</p>}
+                </div>
+                <div className="flex items-center gap-2 text-right">
+                  <span className="rounded-full border border-bg-border px-2 py-0.5 text-2xs text-fg-muted">
+                    {c.scoring_type === 'rubric' ? `Rubric (${c.rubric.length} levels)` : `0–${c.max_score}`}
+                  </span>
+                  {c.track_id && (
+                    <span className="rounded-full border border-bg-border px-2 py-0.5 text-2xs text-fg-subtle">
+                      {tracks.find(t => t.id === c.track_id)?.name ?? c.track_id}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <button type="button" disabled={preview.length === 0} onClick={() => { onImport(preview); reset(); }} className="btn-primary w-full justify-center text-sm disabled:opacity-40">
+        Import {preview.length > 0 ? preview.length : ''} Criteria
+      </button>
+    </div>
+  );
+}
