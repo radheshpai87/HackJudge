@@ -25,7 +25,15 @@ export default function EventDashboard() {
     const orgToken = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
     if (!orgToken) { setNotOrg(true); return; }
     fetch(`${API}/events/${slug}/judges`, { headers: { Authorization: `Bearer ${orgToken}` } })
-      .then((r) => { if (r.status === 401) { setNotOrg(true); return r.json(); } return r.json(); })
+      .then((r) => {
+        if (r.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          window.location.href = `/login?next=/events/${slug}`;
+          return null;
+        }
+        return r.json();
+      })
       .then((d) => { if (d?.success) { setJudges(d.data); setNotOrg(false); } });
   }
 
@@ -220,6 +228,12 @@ function JudgeCard({ judge, slug, portalUrl, onPinUpdated }: { judge: any; slug:
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${orgToken}` },
       body: JSON.stringify({ pin }),
     });
+    if (res.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      window.location.href = `/login?next=/events/${slug}`;
+      return;
+    }
     const data = await res.json();
     setSaving(false);
     if (data.success) { setSaved(true); setPin(''); onPinUpdated(); setTimeout(() => setSaved(false), 2000); }

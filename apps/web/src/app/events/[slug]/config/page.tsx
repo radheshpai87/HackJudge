@@ -61,7 +61,11 @@ export default function ConfigPage() {
     const data = await res.json();
     setSavingBasic(false);
     if (data.success) { setSavedBasic(true); setTimeout(() => setSavedBasic(false), 2500); }
-    else if (res.status === 401) setNotOrg(true);
+    else if (res.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      window.location.href = `/login?next=/events/${slug}/config`;
+    }
     else setErrBasic(data.error?.message ?? 'Failed to save');
   }
 
@@ -77,7 +81,11 @@ export default function ConfigPage() {
     const data = await res.json();
     setSavingStruct(false);
     if (data.success) { setSavedStruct(true); setConfirmReset(false); setTimeout(() => setSavedStruct(false), 2500); }
-    else if (res.status === 401) setNotOrg(true);
+    else if (res.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      window.location.href = `/login?next=/events/${slug}/config`;
+    }
     else setErrStruct(data.error?.message ?? 'Failed to save');
   }
 

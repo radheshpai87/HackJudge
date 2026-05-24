@@ -23,7 +23,12 @@ export default function ResultsPage() {
     const r = await fetch(`${API}/events/${slug}/results`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-    if (r.status === 401) { setState('unauth'); return; }
+    if (r.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      window.location.href = `/login?next=/events/${slug}/results`;
+      return;
+    }
     const d = await r.json();
     if (!d.success) { setState('empty'); return; }
     setResults(d.data);
@@ -34,10 +39,16 @@ export default function ResultsPage() {
     const token = getToken();
     if (!token) { setState('unauth'); return; }
     setGenerating(true);
-    await fetch(`${API}/events/${slug}/results/generate`, {
+    const res = await fetch(`${API}/events/${slug}/results/generate`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     });
+    if (res.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      window.location.href = `/login?next=/events/${slug}/results`;
+      return;
+    }
     setGenerating(false);
     loadResults();
   }

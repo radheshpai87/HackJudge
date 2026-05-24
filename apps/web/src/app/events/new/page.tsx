@@ -175,12 +175,24 @@ export default function NewEventPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${orgToken}` },
         body: JSON.stringify({ configYaml: yaml }),
       });
+      if (res.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        window.location.href = '/login?next=/events/new';
+        return;
+      }
       const resp = await res.json();
       if (!resp.success) { setError(resp.error?.message || 'Failed to create event'); setLoading(false); return; }
       const slug = resp.data.slug;
       let judgesList: any[] = [];
       try {
         const judgesRes = await fetch(`${API}/events/${slug}/judges`, { headers: { Authorization: `Bearer ${orgToken}` } });
+        if (judgesRes.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          window.location.href = '/login?next=/events/new';
+          return;
+        }
         const jd = await judgesRes.json();
         if (jd.success && Array.isArray(jd.data)) judgesList = jd.data;
       } catch {

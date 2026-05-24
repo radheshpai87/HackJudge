@@ -17,7 +17,12 @@ export default function LeaderboardPage() {
     const token = typeof window !== 'undefined' ? (localStorage.getItem('token') ?? '') : '';
     fetch(`${API}/events/${slug}/results`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then((r) => {
-        if (r.status === 401) { setStatus('error'); return null; }
+        if (r.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          window.location.href = `/login?next=/events/${slug}/leaderboard`;
+          return null;
+        }
         return r.json();
       })
       .then((d) => {
