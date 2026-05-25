@@ -79,6 +79,11 @@ function AuthScreen({ slug, eventConfig, prefilledEmail, onSignedIn }: { slug: s
   const [showPin, setShowPin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  const [organizerToken, setOrganizerToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOrganizerToken(localStorage.getItem('token'));
+  }, []);
 
   async function login() {
     if (!email.trim()) { setErr('Enter your email address.'); return; }
@@ -92,6 +97,27 @@ function AuthScreen({ slug, eventConfig, prefilledEmail, onSignedIn }: { slug: s
     else { setErr('Signed in but could not load your profile. Contact the organizer.'); }
   }
 
+  async function loginAsOrganizer() {
+    if (!organizerToken) return;
+    setLoading(true); setErr('');
+    const data = await apiFetch('/auth/judge-login', organizerToken, {
+      method: 'POST',
+      body: JSON.stringify({ tokenExchange: true, eventSlug: slug })
+    });
+    if (!data.success) {
+      setLoading(false);
+      setErr(data.error?.message ?? 'Failed to authenticate using organizer account.');
+      return;
+    }
+    const meData = await apiFetch(`/events/${slug}/judges/me`, data.data.accessToken);
+    setLoading(false);
+    if (meData.success) {
+      onSignedIn(data.data.accessToken, meData.data);
+    } else {
+      setErr('Signed in but could not load your profile. Contact the organizer.');
+    }
+  }
+
   return (
     <div className="px-6 pt-14 pb-10">
       <div className="mb-10 text-center">
@@ -103,6 +129,23 @@ function AuthScreen({ slug, eventConfig, prefilledEmail, onSignedIn }: { slug: s
           ? <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-fg-muted">{eventConfig.event.description}</p>
           : <p className="mt-1 font-mono text-xs text-fg-subtle">{slug}</p>}
       </div>
+
+      {organizerToken && (
+        <div className="card mb-6 border border-primary/20 bg-primary/5 p-5 text-center">
+          <p className="text-[15px] font-semibold text-fg-default">Logged in as Organizer</p>
+          <p className="mt-1.5 text-xs text-fg-muted leading-relaxed">
+            You can access the judging portal for your event directly using your active session.
+          </p>
+          <button
+            type="button"
+            onClick={loginAsOrganizer}
+            disabled={loading}
+            className="btn-primary mt-4 w-full py-2.5 text-xs font-semibold"
+          >
+            {loading ? 'Accessing Judge Portal…' : 'Access Judge Portal →'}
+          </button>
+        </div>
+      )}
 
       <div className="card p-6">
         <h2 className="mb-5 text-base font-semibold text-fg-default">Judge Sign In</h2>
@@ -128,7 +171,9 @@ function AuthScreen({ slug, eventConfig, prefilledEmail, onSignedIn }: { slug: s
                 {showPin ? 'Hide' : 'Show'}
               </button>
             </div>
-            <p className="mt-1.5 text-xs text-fg-subtle">Your PIN is provided by the event organizer.</p>
+            <p className="mt-1.5 text-xs text-fg-subtle leading-relaxed">
+              Your PIN is provided by the event organizer. Organizers can also sign in with their password.
+            </p>
           </div>
         </div>
         {err && <p className="mt-3 rounded-md bg-semantic-error/10 px-3 py-2 text-sm text-semantic-error">{err}</p>}
