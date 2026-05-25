@@ -159,7 +159,20 @@ export default function NewEventPage() {
     const out = [...criteria];
     byTrack.forEach((crits) => {
       const n = crits.length;
-      for (const c of crits) { const idx = out.findIndex(x => x.id === c.id); if (idx >= 0) out[idx] = { ...out[idx], weight: Number((1 / n).toFixed(3)) }; }
+      let sum = 0;
+      crits.forEach((c, i) => {
+        const idx = out.findIndex(x => x.id === c.id);
+        if (idx >= 0) {
+          let w;
+          if (i === n - 1) {
+            w = Number((1 - sum).toFixed(4));
+          } else {
+            w = Number((1 / n).toFixed(4));
+            sum += w;
+          }
+          out[idx] = { ...out[idx], weight: w };
+        }
+      });
     });
     return out;
   };
@@ -182,7 +195,16 @@ export default function NewEventPage() {
         return;
       }
       const resp = await res.json();
-      if (!resp.success) { setError(resp.error?.message || 'Failed to create event'); setLoading(false); return; }
+      if (!resp.success) {
+        let errMsg = resp.error?.message || 'Failed to create event';
+        if (resp.error?.details && Array.isArray(resp.error.details)) {
+          const detailsStr = resp.error.details.map((d: any) => `${d.path}: ${d.message}`).join(', ');
+          errMsg = `${errMsg} (${detailsStr})`;
+        }
+        setError(errMsg);
+        setLoading(false);
+        return;
+      }
       const slug = resp.data.slug;
       let judgesList: any[] = [];
       try {
