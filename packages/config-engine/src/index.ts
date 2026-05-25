@@ -198,7 +198,7 @@ export const eventConfigSchema = z
           for (const tid of a.team_ids) {
             const team = data.teams.find((t) => t.id === tid);
             if (team && team.track_id !== null) {
-              if (Array.isArray(judge.tracks) && !judge.tracks.includes(team.track_id)) {
+              if (Array.isArray(judge.tracks) && !judge.tracks.includes("all") && !judge.tracks.includes(team.track_id)) {
                 ctx.addIssue({
                   code: z.ZodIssueCode.custom,
                   message: `Judge '${judge.id}' assigned to team '${team.id}' in track '${team.track_id}' which they do not cover`,
