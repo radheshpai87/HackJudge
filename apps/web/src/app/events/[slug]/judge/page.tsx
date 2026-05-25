@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Hexagon, ArrowLeft, ArrowRight, Check, Trophy, LogOut, Pencil, MessageSquare } from 'lucide-react';
+import Loader from '@/components/Loader';
 
 const API = '/api';
 
@@ -92,7 +93,7 @@ export default function JudgePortal() {
   async function handleSubmitted(progress: { completed: number; totalAssigned: number }) { await refreshJudgeState(authToken); setLastProgress(progress); setScreen('success'); }
   function handleSignOut() { localStorage.removeItem(tokenKey(slug)); setAuthToken(''); setJudgeState(null); setCurrentTeam(null); setScreen('auth'); }
 
-  if (screen === 'loading') return <Shell><div className="flex h-screen items-center justify-center"><Loader /></div></Shell>;
+  if (screen === 'loading') return <Shell><div className="flex h-screen items-center justify-center"><Loader text="Verifying session..." /></div></Shell>;
   if (screen === 'auth') return <Shell><AuthScreen slug={slug} eventConfig={eventConfig} prefilledEmail={prefilledEmail} onSignedIn={handleSignedIn} /></Shell>;
   if (screen === 'home') return <Shell><HomeScreen judgeState={judgeState!} eventConfig={eventConfig} onSelectTeam={handleSelectTeam} onSignOut={handleSignOut} /></Shell>;
   if (screen === 'scoring') return <Shell><ScoringScreen token={authToken} slug={slug} team={currentTeam!} eventConfig={eventConfig} onSubmitted={handleSubmitted} onBack={() => setScreen('home')} /></Shell>;
@@ -388,7 +389,7 @@ function ScoringScreen({ token, slug, team, eventConfig, onSubmitted, onBack }: 
     }
   }
 
-  if (loading) return <div className="flex h-screen items-center justify-center"><Loader /></div>;
+  if (loading) return <div className="flex h-screen items-center justify-center"><Loader text="Loading team scores..." /></div>;
 
   return (
     <div className="pb-20">
@@ -542,14 +543,3 @@ function SuccessScreen({ team, eventConfig, progress, onContinue }: { team: Team
   );
 }
 
-function Loader() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-4">
-      <div className="relative flex h-12 w-12 items-center justify-center">
-        <div className="absolute animate-spin rounded-full h-10 w-10 border-2 border-fg-subtle/25 border-t-fg-default"></div>
-        <Hexagon size={16} className="text-fg-muted animate-pulse" strokeWidth={2} />
-      </div>
-      <p className="text-[11px] font-semibold tracking-wider text-fg-subtle uppercase animate-pulse">Loading...</p>
-    </div>
-  );
-}

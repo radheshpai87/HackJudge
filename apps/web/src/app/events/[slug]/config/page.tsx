@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Save, Check, Plus, Trash2, AlertTriangle, Users, Tag, ListChecks, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
+import Loader from '@/components/Loader';
 
 const API = '/api';
 
@@ -131,7 +132,7 @@ export default function ConfigPage() {
   if (loading) {
     return (
       <main className="page-shell flex min-h-screen items-center justify-center">
-        <p className="text-sm text-fg-muted">Loading…</p>
+        <Loader text="Loading event settings..." />
       </main>
     );
   }

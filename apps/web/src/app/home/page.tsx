@@ -7,6 +7,7 @@ import {
   Clock, ExternalLink
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import Loader from '@/components/Loader';
 
 const API = '/api';
 
@@ -70,7 +71,7 @@ export default function HomePage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-24">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-fg-subtle border-t-fg-default" />
+            <Loader text="Loading your events..." />
           </div>
         ) : events.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-bg-border py-24 text-center">

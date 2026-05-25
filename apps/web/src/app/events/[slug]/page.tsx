@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Activity, BarChart3, Users, CheckCircle, QrCode, Copy, ExternalLink, KeyRound, ShieldCheck, Eye, EyeOff, Trophy, Settings } from 'lucide-react';
 import Link from 'next/link';
+import Loader from '@/components/Loader';
 
 const API = '/api';
 
@@ -50,7 +51,7 @@ export default function EventDashboard() {
   if (!event) {
     return (
       <div className="page-shell flex min-h-screen items-center justify-center">
-        <p className="text-sm text-fg-muted">Loading…</p>
+        <Loader text="Loading event dashboard..." />
       </div>
     );
   }
