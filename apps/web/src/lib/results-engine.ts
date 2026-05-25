@@ -99,7 +99,9 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
     byJudge.forEach((judgeScores) => {
       const judgeTotal = judgeScores.reduce((sum: number, s: any) => {
         const weight = Number(s.criterion.weight);
-        return sum + Number(s.value) * weight;
+        const maxScore = Number(s.criterion.maxScore);
+        const valOutOf100 = maxScore > 0 ? (Number(s.value) / maxScore) * 100 : 0;
+        return sum + valOutOf100 * weight;
       }, 0);
       totalScoreSum += judgeTotal;
     });
@@ -113,7 +115,7 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
       const maxScore = criterion.maxScore;
       const weight = Number(criterion.weight);
       const avgScore = critScores.reduce((sum: number, s: any) => sum + Number(s.value), 0) / critScores.length;
-      const weightedScore = avgScore * weight;
+      const weightedScore = maxScore > 0 ? (avgScore / maxScore) * weight * 100 : 0;
 
       criteriaBreakdown.push({ criterionId, criterionName: criterion.name, weightedScore, avgScore, maxScore });
 
