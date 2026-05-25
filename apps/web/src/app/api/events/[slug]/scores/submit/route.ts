@@ -29,11 +29,16 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
 
     await auditLog(event.id, user.id, "judge", "scores_submitted", { teamId });
     return success({ submitted: true });
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof AuthError) {
       return apiError(error.code, error.message, null, error.status);
     }
     console.error("Score submit error:", error);
-    return apiError("INTERNAL_ERROR", "Failed to submit scores", null, 500);
+    const message = error.message || "";
+    let friendlyMessage = "Failed to submit scores. Please try again.";
+    if (message.toLowerCase().includes("connect") || message.toLowerCase().includes("mongo") || message.toLowerCase().includes("timeout")) {
+      friendlyMessage = "Database connection error. Please check your internet connection and try again.";
+    }
+    return apiError("INTERNAL_ERROR", friendlyMessage, null, 500);
   }
 }

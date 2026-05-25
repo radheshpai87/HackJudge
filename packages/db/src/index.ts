@@ -38,6 +38,33 @@ function toObjectId(val: string | ObjectId | undefined): ObjectId | undefined {
   try { return new ObjectId(val); } catch { return undefined; }
 }
 
+function getCollectionName(name: string): string {
+  const mapping: Record<string, string> = {
+    tracks: "track",
+    track: "track",
+    criterions: "criterion",
+    criteria: "criterion",
+    criterion: "criterion",
+    teams: "team",
+    team: "team",
+    judges: "judge",
+    judge: "judge",
+    judgeTracks: "judgeTrack",
+    judgeTrack: "judgeTrack",
+    scoreSubmissions: "scoreSubmission",
+    scoreSubmission: "scoreSubmission",
+    assignments: "assignment",
+    assignment: "assignment",
+    scores: "score",
+    score: "score",
+    events: "event",
+    event: "event",
+    users: "user",
+    user: "user",
+  };
+  return mapping[name] ?? name;
+}
+
 async function buildWhere(filter: Record<string, any>): Promise<Filter<Document>> {
   const db = _db ?? await connect();
   const out: Filter<Document> = {};
@@ -65,7 +92,7 @@ async function buildWhere(filter: Record<string, any>): Promise<Filter<Document>
     };
     if (typeof v === "object" && v !== null && !Array.isArray(v) && relationFkMap[k] && !("in" in v || "not" in v || "gt" in v || "gte" in v || "lt" in v || "lte" in v || "contains" in v)) {
       const fk = relationFkMap[k];
-      const relColName = k + (k === "criterion" ? "s" : k.endsWith("s") ? "" : k === "judge" ? "s" : k === "track" ? "s" : k === "team" ? "s" : k === "score" ? "s" : k === "user" ? "s" : "s");
+      const relColName = getCollectionName(k);
       const relFilter = await buildWhere(v);
       const relDocs = await db.collection(relColName).find(relFilter, { projection: { _id: 1 } }).toArray();
       if (relDocs.length === 0) {
@@ -149,17 +176,17 @@ class CollectionProxy {
     for (const [relName, relConfig] of Object.entries(include)) {
       if (relConfig === false) continue;
       if (relName === "track") {
-        const relCol = db.collection("tracks");
+        const relCol = db.collection(getCollectionName(relName));
         const relDoc = await relCol.findOne({ _id: toObjectId(result.trackId) });
         result[relName] = mapDoc(relDoc);
       } else if (relName === "criterion" || relName === "team" || relName === "judge") {
         const fk = `${relName}Id`;
-        const relCol = db.collection(relName + "s");
+        const relCol = db.collection(getCollectionName(relName));
         const relDoc = await relCol.findOne({ _id: toObjectId(result[fk]) });
         result[relName] = mapDoc(relDoc);
       } else if (relName === "judgeTracks" || relName === "scoreSubmissions" || relName === "assignments") {
-        const parentFk = `${this.col.collectionName.slice(0, -1)}Id`;
-        const relCol = db.collection(relName);
+        const parentFk = `${getCollectionName(this.col.collectionName)}Id`;
+        const relCol = db.collection(getCollectionName(relName));
         const relDocs = await relCol.find({ [parentFk]: new ObjectId(result.id) }).toArray();
         result[relName] = mapDocs(relDocs);
         // handle nested include inside arrays
@@ -169,8 +196,8 @@ class CollectionProxy {
           }
         }
       } else {
-        const fk = `${this.col.collectionName.slice(0, -1)}Id`;
-        const relCol = db.collection(relName);
+        const fk = `${getCollectionName(this.col.collectionName)}Id`;
+        const relCol = db.collection(getCollectionName(relName));
         const relDocs = await relCol.find({ [fk]: new ObjectId(result.id) }).toArray();
         result[relName] = mapDocs(relDocs);
       }

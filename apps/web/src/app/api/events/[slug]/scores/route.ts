@@ -49,12 +49,17 @@ export async function PUT(req: NextRequest, { params }: { params: { slug: string
 
     await auditLog(event.id, user.id, "judge", "scores_saved", { teamId, count: scores.length });
     return success({ saved: scores.length });
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof AuthError) {
       return apiError(error.code, error.message, null, error.status);
     }
     console.error("Scores PUT endpoint error:", error);
-    return apiError("INTERNAL_ERROR", "Failed to save scores", null, 500);
+    const message = error.message || "";
+    let friendlyMessage = "Failed to save scores draft. Please try again.";
+    if (message.toLowerCase().includes("connect") || message.toLowerCase().includes("mongo") || message.toLowerCase().includes("timeout")) {
+      friendlyMessage = "Database connection error. Please check your internet connection and try again.";
+    }
+    return apiError("INTERNAL_ERROR", friendlyMessage, null, 500);
   }
 }
 
@@ -68,12 +73,17 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
       include: { judge: true, team: true, criterion: true },
     });
     return success(scores.map((s: any) => ({ id: s.id, judge: s.judge.name, team: s.team.name, criterion: s.criterion.name, value: s.value, submittedAt: s.submittedAt })));
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof AuthError) {
       return apiError(error.code, error.message, null, error.status);
     }
     console.error("Scores GET endpoint error:", error);
-    return apiError("INTERNAL_ERROR", "Failed to fetch scores", null, 500);
+    const message = error.message || "";
+    let friendlyMessage = "Failed to load scores. Please try again.";
+    if (message.toLowerCase().includes("connect") || message.toLowerCase().includes("mongo") || message.toLowerCase().includes("timeout")) {
+      friendlyMessage = "Database connection error. Please verify your connection and try again.";
+    }
+    return apiError("INTERNAL_ERROR", friendlyMessage, null, 500);
   }
 }
 

@@ -69,7 +69,12 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
     });
   } catch (e: any) {
     if (e.name === "AuthError") return apiError(e.code, e.message, null, e.status);
-    console.error(e);
-    return apiError("INTERNAL_ERROR", e.message || "Internal error", null, 500);
+    console.error("GET /judges/me error:", e);
+    const message = e.message || "";
+    let friendlyMessage = "An unexpected error occurred while loading your profile. Please try again.";
+    if (message.toLowerCase().includes("connect") || message.toLowerCase().includes("mongo") || message.toLowerCase().includes("timeout")) {
+      friendlyMessage = "Database connection error. Please verify your connection and try again.";
+    }
+    return apiError("INTERNAL_ERROR", friendlyMessage, null, 500);
   }
 }

@@ -15,11 +15,43 @@ interface EventMeta { name: string; description: string; }
 interface EventConfig { event: EventMeta; tracks: Array<{ id: string; name: string }>; }
 
 async function apiFetch(path: string, token?: string, opts: RequestInit = {}) {
-  const res = await fetch(`${API}${path}`, {
-    ...opts,
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(opts.headers ?? {}) },
-  });
-  return res.json();
+  try {
+    const res = await fetch(`${API}${path}`, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(opts.headers ?? {}) },
+    });
+
+    const contentType = res.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      return {
+        success: false,
+        error: {
+          message: `Unexpected response from server (Status ${res.status}). Please try again later.`,
+          code: "SERVER_ERROR"
+        }
+      };
+    }
+
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        error: {
+          message: data?.error?.message ?? `Request failed with status ${res.status}. Please try again.`,
+          code: data?.error?.code ?? "API_ERROR"
+        }
+      };
+    }
+    return data;
+  } catch (err: any) {
+    return {
+      success: false,
+      error: {
+        message: "Network or connection error. Please verify your internet connection and try again.",
+        code: "NETWORK_ERROR"
+      }
+    };
+  }
 }
 
 function tokenKey(slug: string) { return `judge_token_${slug}`; }
@@ -213,18 +245,34 @@ function HomeScreen({ judgeState, eventConfig, onSelectTeam, onSignOut }: { judg
         {/* Progress card */}
         <div className="mb-5 rounded-xl border border-bg-border bg-bg-subtle p-5">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm font-medium text-fg-default">Your Progress</span>
-            <span className="font-mono text-sm text-fg-muted">{progress.completed} <span className="text-fg-subtle">/ {progress.totalAssigned}</span></span>
+            <span className="text-sm font-semibold text-fg-default">Your Progress</span>
+            <span className="font-mono text-sm text-fg-muted font-bold">{progress.completed} <span className="text-fg-subtle font-normal">/ {progress.totalAssigned}</span></span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-bg-muted">
+          <div className="h-2 overflow-hidden rounded-full bg-bg-muted mb-4">
             <div
               className={`h-full rounded-full transition-all duration-500 ${progress.percent === 100 ? 'bg-semantic-success' : 'bg-fg-default'}`}
               style={{ width: `${progress.percent}%` }}
             />
           </div>
-          {progress.percent === 100
-            ? <p className="mt-2.5 text-center text-xs font-medium text-semantic-success">All teams scored!</p>
-            : <p className="mt-2 text-xs text-fg-subtle">{progress.totalAssigned - progress.completed} remaining</p>}
+          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-bg-border/60 text-center">
+            <div>
+              <p className="text-[10px] uppercase font-bold text-fg-subtle tracking-wider">Assigned</p>
+              <p className="mt-0.5 text-lg font-extrabold text-fg-default">{progress.totalAssigned}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-fg-subtle tracking-wider">Completed</p>
+              <p className="mt-0.5 text-lg font-extrabold text-semantic-success">{progress.completed}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-fg-subtle tracking-wider">Progress</p>
+              <p className="mt-0.5 text-lg font-extrabold text-fg-default">{progress.percent}%</p>
+            </div>
+          </div>
+          {progress.percent === 100 ? (
+            <p className="mt-3.5 text-center text-xs font-semibold text-semantic-success bg-semantic-success/5 py-1.5 rounded-lg border border-semantic-success/10">All teams scored!</p>
+          ) : (
+            <p className="mt-3 text-center text-xs font-medium text-fg-subtle bg-bg-muted/40 py-1 rounded-lg">{progress.totalAssigned - progress.completed} teams remaining to score</p>
+          )}
         </div>
 
         {/* Pending teams */}
