@@ -34,6 +34,11 @@ export default function ConfigPage() {
   const [errStruct, setErrStruct] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteConfirmSlug, setDeleteConfirmSlug] = useState('');
+  const [deletingEvent, setDeletingEvent] = useState(false);
+  const [errDelete, setErrDelete] = useState('');
+
   useEffect(() => {
     fetch(`${API}/events/${slug}`)
       .then((r) => r.json())
@@ -87,6 +92,35 @@ export default function ConfigPage() {
       window.location.href = `/login?next=/events/${slug}/config`;
     }
     else setErrStruct(data.error?.message ?? 'Failed to save');
+  }
+
+  async function handleDeleteEvent() {
+    if (deleteConfirmSlug !== slug) return;
+    setDeletingEvent(true); setErrDelete('');
+    const token = getToken();
+    if (!token) { setNotOrg(true); setDeletingEvent(false); return; }
+    try {
+      const res = await fetch(`${API}/events/${slug}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        window.location.href = `/login?next=/events/${slug}/config`;
+        return;
+      }
+      const data = await res.json();
+      if (data.success) {
+        window.location.href = '/home';
+      } else {
+        setErrDelete(data.error?.message ?? 'Failed to delete event');
+      }
+    } catch {
+      setErrDelete('Network error. Failed to delete event.');
+    } finally {
+      setDeletingEvent(false);
+    }
   }
 
   function updateTrack(i: number, patch: Partial<Track>) { setTracks(ts => ts.map((t, j) => j === i ? { ...t, ...patch } : t)); }
@@ -273,6 +307,55 @@ export default function ConfigPage() {
             <button type="button" onClick={() => setConfirmReset(false)} className="btn-ghost text-sm">Cancel</button>
           </div>
         )}
+
+        {/* Danger Zone */}
+        <div className="card border-semantic-error/30 bg-semantic-error/5 mt-8 p-6">
+          <h2 className="mb-2 text-base font-semibold text-semantic-error flex items-center gap-2">
+            <Trash2 size={16} /> Danger Zone
+          </h2>
+          <p className="mb-4 text-xs text-fg-muted">
+            Once you delete an event, there is no going back. All teams, judges, assignments, and submitted scores will be permanently deleted.
+          </p>
+          {errDelete && <p className="mb-3 text-sm text-semantic-error">{errDelete}</p>}
+          {!confirmDelete ? (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="btn bg-semantic-error hover:bg-semantic-error/90 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+            >
+              Delete Event
+            </button>
+          ) : (
+            <div className="flex flex-col gap-3 rounded-lg border border-semantic-error/20 bg-semantic-error/10 p-4">
+              <p className="text-sm font-medium text-semantic-error">
+                Are you absolutely sure? Type the event slug <code className="font-mono bg-bg-muted px-1.5 py-0.5 rounded text-fg-default">{slug}</code> to confirm deletion.
+              </p>
+              <input
+                className="input w-full font-mono text-sm"
+                placeholder="Enter event slug"
+                value={deleteConfirmSlug}
+                onChange={(e) => setDeleteConfirmSlug(e.target.value)}
+              />
+              <div className="flex gap-2 justify-end mt-1">
+                <button
+                  type="button"
+                  onClick={() => { setConfirmDelete(false); setDeleteConfirmSlug(''); setErrDelete(''); }}
+                  className="btn-ghost text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteEvent}
+                  disabled={deleteConfirmSlug !== slug || deletingEvent}
+                  className="btn bg-semantic-error hover:bg-semantic-error/90 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-40"
+                >
+                  {deletingEvent ? 'Deleting...' : 'Yes, Delete Event'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
       </div>
     </main>
