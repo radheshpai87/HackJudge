@@ -87,7 +87,7 @@ export default function ResultsPage() {
   const isLocked = results.locked ?? false;
 
   return (
-    <main className="page-shell px-6 py-10">
+    <main className="page-shell px-6 py-10 animate-fade-in">
       <div className="container-tight">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-fg-default">Results</h1>
@@ -99,28 +99,6 @@ export default function ResultsPage() {
             <AlertTriangle size={16} /> Manual tiebreak required for some teams.
           </div>
         )}
-
-        {/* Top 3 Podium */}
-        {ranking.length >= 3 && (
-          <div className="mb-8 grid grid-cols-3 gap-4">
-            {[1, 0, 2].map((idx) => {
-              const team = ranking[idx];
-              if (!team) return null;
-              const sizes = idx === 0 ? 'order-2 py-8' : 'order-1 py-6';
-              const border = idx === 0 ? 'border-fg-default' : 'border-bg-border';
-              return (
-                <div key={idx} className={`${sizes} flex flex-col items-center rounded-xl border ${border} bg-bg-subtle text-center`}>
-                  <div className={`mb-2 inline-flex h-8 w-8 items-center justify-center rounded-full ${idx === 0 ? 'bg-fg-default text-bg-base' : 'bg-bg-muted text-fg-muted'} text-sm font-bold`}>
-                    {idx + 1}
-                  </div>
-                  <p className="text-sm font-semibold text-fg-default">{team.teamName}</p>
-                  <p className="mt-1 font-mono text-lg text-fg-default">{team.score?.toFixed ? `${team.score.toFixed(1)}%` : 'N/A'}</p>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
         {/* Leaderboard table */}
         <div className="card mb-8 overflow-hidden">
           {/* Header */}
@@ -165,7 +143,7 @@ export default function ResultsPage() {
                   )}
                 </div>
                 <span className="text-sm text-fg-muted">{team.trackName ?? '—'}</span>
-                <span className="font-mono text-sm text-fg-default">{team.score?.toFixed ? `${team.score.toFixed(1)}%` : 'N/A'}</span>
+                <span className="font-mono text-sm text-fg-default">{team.score?.toFixed ? team.score.toFixed(2) : 'N/A'}</span>
                 <span className="font-mono text-sm text-fg-muted">{team.judgeCount}</span>
               </div>
             );

@@ -98,7 +98,7 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
       const maxScore = criterion.maxScore;
       const weight = Number(criterion.weight);
       const avgScore = critScores.reduce((sum: number, s: any) => sum + Number(s.value), 0) / critScores.length;
-      const weightedScore = (avgScore / maxScore) * weight * 100;
+      const weightedScore = avgScore * weight;
       totalScore += weightedScore;
 
       criteriaBreakdown.push({ criterionId, criterionName: criterion.name, weightedScore, avgScore, maxScore });

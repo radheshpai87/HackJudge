@@ -72,7 +72,7 @@ export default function LeaderboardPage() {
   const filtered = trackFilter === 'all' ? ranking : ranking.filter((t: any) => t.trackName === trackFilter);
 
   return (
-    <main className="page-shell px-6 py-10">
+    <main className="page-shell px-6 py-10 animate-fade-in">
       <div className="container-tight">
         {/* Header */}
         <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
@@ -119,7 +119,7 @@ export default function LeaderboardPage() {
                     {isFirst ? <Trophy size={20} /> : <span className="text-sm font-bold">{idx + 1}</span>}
                   </div>
                   <p className="text-base font-semibold text-fg-default">{team.teamName}</p>
-                  <p className="mt-1 font-mono text-xl font-bold text-fg-default">{team.score?.toFixed ? `${team.score.toFixed(1)}%` : 'N/A'}</p>
+                  <p className="mt-1 font-mono text-xl font-bold text-fg-default">{team.score?.toFixed ? team.score.toFixed(2) : 'N/A'}</p>
                   <p className="mt-1 text-xs text-fg-subtle">{team.trackName ?? '—'}</p>
                 </div>
               );
@@ -152,7 +152,7 @@ export default function LeaderboardPage() {
                 </div>
                 <span className="truncate text-sm font-medium text-fg-default">{team.teamName}</span>
                 <span className="hidden truncate text-sm text-fg-muted sm:block">{team.trackName ?? '—'}</span>
-                <span className="font-mono text-sm text-fg-default">{team.score?.toFixed ? `${team.score.toFixed(1)}%` : 'N/A'}</span>
+                <span className="font-mono text-sm text-fg-default">{team.score?.toFixed ? team.score.toFixed(2) : 'N/A'}</span>
                 <span className="font-mono text-sm text-fg-muted">{team.judgeCount}</span>
               </div>
             );
