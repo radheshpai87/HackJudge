@@ -20,6 +20,8 @@ interface ComputedTeamResult {
     criterionId: string;
     deviation: number;
   }>;
+  finishedJudges: Array<{ id: string; name: string }>;
+  allJudges: Array<{ id: string; name: string }>;
 }
 
 export interface ResultSnapshot {
@@ -33,10 +35,16 @@ export interface ResultSnapshot {
 }
 
 export async function computeResults(eventId: string): Promise<ResultSnapshot> {
-  const scores = await prisma.score.findMany({
-    where: { team: { eventId } },
-    include: { criterion: true, team: true, judge: true },
-  });
+  const [scores, submissions] = await Promise.all([
+    prisma.score.findMany({
+      where: { team: { eventId } },
+      include: { criterion: true, team: true, judge: true },
+    }),
+    prisma.scoreSubmission.findMany({
+      where: { eventId },
+      include: { judge: true },
+    }),
+  ]);
 
   const config = (await prisma.event.findUnique({ where: { id: eventId } }))!.configJson as any;
   const tiebreaker = config.results?.tiebreaker ?? "higher_avg";
@@ -47,6 +55,13 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
     const arr = teamScores.get(s.teamId) ?? [];
     arr.push(s);
     teamScores.set(s.teamId, arr);
+  }
+
+  const teamSubmissions = new Map<string, any[]>();
+  for (const sub of submissions) {
+    const arr = teamSubmissions.get(sub.teamId) ?? [];
+    arr.push(sub);
+    teamSubmissions.set(sub.teamId, arr);
   }
 
   const teamResults: ComputedTeamResult[] = [];
@@ -62,6 +77,7 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
         teamId: team.id, teamName: team.name, trackId: team.trackId,
         trackName: team.track?.name ?? null, score: null, judgeCount: 0,
         criteriaBreakdown: [], outlierFlags: [],
+        finishedJudges: [], allJudges: [],
       });
       continue;
     }
@@ -101,11 +117,21 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
       }
     });
 
+    const allJudgesMap = new Map<string, string>();
+    for (const s of teamScoreList) {
+      if (s.judge) allJudgesMap.set(s.judge.id, s.judge.name);
+    }
+    const allJudges = Array.from(allJudgesMap.entries()).map(([id, name]) => ({ id, name }));
+
+    const subList = teamSubmissions.get(team.id) ?? [];
+    const finishedJudges = subList.map((sub: any) => ({ id: sub.judgeId, name: sub.judge?.name ?? "Unknown Judge" }));
+
     teamResults.push({
       teamId: team.id, teamName: team.name, trackId: team.trackId,
       trackName: team.track?.name ?? null,
       score: Math.round(totalScore * 100) / 100, judgeCount,
       criteriaBreakdown, outlierFlags,
+      finishedJudges, allJudges,
     });
   }
 

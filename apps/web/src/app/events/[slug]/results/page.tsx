@@ -140,7 +140,30 @@ export default function ResultsPage() {
                 className={`grid grid-cols-[60px_1fr_120px_100px_80px] gap-4 border-b border-bg-border bg-bg-subtle px-6 py-4 transition-colors hover:bg-bg-muted ${isTop3 ? 'border-l-2 border-l-fg-default' : 'border-l-2 border-l-bg-border'}`}
               >
                 <span className={`font-mono text-lg font-medium ${isTop3 ? 'text-fg-default' : 'text-fg-subtle'}`}>{idx + 1}</span>
-                <span className="text-sm font-medium text-fg-default">{team.teamName}</span>
+                <div className="flex flex-col min-w-0">
+                  <span className="truncate text-sm font-medium text-fg-default">{team.teamName}</span>
+                  {team.allJudges && team.allJudges.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1 items-center">
+                      <span className="text-[10px] uppercase font-bold text-fg-subtle tracking-wider mr-1">Judges:</span>
+                      {team.allJudges.map((j: any) => {
+                        const isFinished = team.finishedJudges?.some((fj: any) => fj.id === j.id);
+                        return (
+                          <span
+                            key={j.id}
+                            className={`rounded px-1.5 py-0.5 text-[9px] font-semibold border ${
+                              isFinished
+                                ? 'bg-semantic-success/10 border-semantic-success/20 text-semantic-success'
+                                : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                            }`}
+                            title={isFinished ? 'Finished Scoring' : 'Scoring in progress (Draft)'}
+                          >
+                            {j.name} {isFinished ? '✓' : '•'}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
                 <span className="text-sm text-fg-muted">{team.trackName ?? '—'}</span>
                 <span className="font-mono text-sm text-fg-default">{team.score?.toFixed ? `${team.score.toFixed(1)}%` : 'N/A'}</span>
                 <span className="font-mono text-sm text-fg-muted">{team.judgeCount}</span>
