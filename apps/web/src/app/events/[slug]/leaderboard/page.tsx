@@ -105,28 +105,6 @@ export default function LeaderboardPage() {
             ))}
           </div>
         )}
-
-        {/* Podium */}
-        {filtered.length >= 3 && (
-          <div className="mb-10 grid grid-cols-3 items-end gap-4">
-            {[1, 0, 2].map((idx) => {
-              const team = filtered[idx];
-              if (!team) return null;
-              const isFirst = idx === 0;
-              return (
-                <div key={idx} className={`flex flex-col items-center rounded-2xl border border-bg-border bg-bg-subtle p-5 text-center ${isFirst ? 'order-2 py-10' : 'order-1 py-6'}`}>
-                  <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full ${isFirst ? 'bg-fg-default text-bg-base' : 'bg-bg-muted text-fg-muted'}`}>
-                    {isFirst ? <Trophy size={20} /> : <span className="text-sm font-bold">{idx + 1}</span>}
-                  </div>
-                  <p className="text-base font-semibold text-fg-default">{team.teamName}</p>
-                  <p className="mt-1 font-mono text-xl font-bold text-fg-default">{team.score?.toFixed ? team.score.toFixed(2) : 'N/A'}</p>
-                  <p className="mt-1 text-xs text-fg-subtle">{team.trackName ?? '—'}</p>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
         {/* Full table */}
         <div className="card overflow-hidden">
           <div className="grid grid-cols-[48px_1fr_100px_100px_80px] gap-4 border-b border-bg-border bg-bg-muted px-6 py-3 sm:grid-cols-[60px_1fr_120px_100px_80px]">
