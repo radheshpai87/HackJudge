@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Trophy, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import Loader from '@/components/Loader';
 
 const API = '/api';
 
@@ -37,7 +38,7 @@ export default function LeaderboardPage() {
   if (status === 'loading') {
     return (
       <main className="page-shell flex min-h-screen items-center justify-center">
-        <p className="text-sm text-fg-muted">Loading leaderboard…</p>
+        <Loader text="Loading leaderboard..." />
       </main>
     );
   }

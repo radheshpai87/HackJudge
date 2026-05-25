@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Download, FileText, Lock, AlertTriangle, RefreshCw, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
+import Loader from '@/components/Loader';
 
 const API = '/api';
 
@@ -57,7 +58,7 @@ export default function ResultsPage() {
 
   if (state === 'loading') return (
     <div className="page-shell flex min-h-screen items-center justify-center">
-      <p className="text-sm text-fg-muted">Loading results…</p>
+      <Loader text="Loading results..." />
     </div>
   );
 
