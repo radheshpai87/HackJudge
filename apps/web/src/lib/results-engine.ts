@@ -88,8 +88,23 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
       arr.push(s);
       byCriterion.set(s.criterionId, arr);
     }
+    const byJudge = new Map<string, typeof teamScoreList>();
+    for (const s of teamScoreList) {
+      const arr = byJudge.get(s.judgeId) ?? [];
+      arr.push(s);
+      byJudge.set(s.judgeId, arr);
+    }
 
-    let totalScore = 0;
+    let totalScoreSum = 0;
+    byJudge.forEach((judgeScores) => {
+      const judgeTotal = judgeScores.reduce((sum: number, s: any) => {
+        const weight = Number(s.criterion.weight);
+        return sum + Number(s.value) * weight;
+      }, 0);
+      totalScoreSum += judgeTotal;
+    });
+    const totalScore = byJudge.size > 0 ? (totalScoreSum / byJudge.size) : 0;
+
     const criteriaBreakdown: ComputedTeamResult["criteriaBreakdown"] = [];
     const outlierFlags: ComputedTeamResult["outlierFlags"] = [];
 
@@ -99,7 +114,6 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
       const weight = Number(criterion.weight);
       const avgScore = critScores.reduce((sum: number, s: any) => sum + Number(s.value), 0) / critScores.length;
       const weightedScore = avgScore * weight;
-      totalScore += weightedScore;
 
       criteriaBreakdown.push({ criterionId, criterionName: criterion.name, weightedScore, avgScore, maxScore });
 
