@@ -18,7 +18,26 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
       prisma.assignment.count({ where: { eventId: event.id } }).catch(() => 0),
     ];
     
-    const [totalTeams, totalJudges, completedSubmissions, totalAssignments] = await Promise.all(countPromises);
+    const [totalTeams, totalJudges, completedSubmissions, assignmentsCount] = await Promise.all(countPromises);
+    
+    let totalAssignments = assignmentsCount;
+    if (assignmentsCount === 0 && totalJudges > 0 && totalTeams > 0) {
+      const [judges, teams] = await Promise.all([
+        prisma.judge.findMany({ where: { eventId: event.id }, include: { judgeTracks: true } }),
+        prisma.team.findMany({ where: { eventId: event.id }, select: { trackId: true } }),
+      ]);
+      
+      let sum = 0;
+      for (const j of judges) {
+        const judgeTrackIds = j.judgeTracks.map((jt: any) => jt.trackId);
+        const targetTeams = teams.filter((t: any) => {
+          if (judgeTrackIds.length === 0) return true;
+          return t.trackId === null || judgeTrackIds.includes(t.trackId);
+        });
+        sum += targetTeams.length;
+      }
+      totalAssignments = sum;
+    }
     
     return success({ status: "open", totalTeams, totalJudges, completedSubmissions, totalAssignments });
   } catch (error) {

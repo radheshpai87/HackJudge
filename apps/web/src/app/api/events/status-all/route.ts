@@ -55,13 +55,33 @@ export async function GET(req: NextRequest) {
     const countQueries = Promise.all(
       events.map(async (e: any) => {
         try {
-          const counts = await Promise.all([
+          const [teamsCount, judgesCount, submissionsCount, assignmentsCount] = await Promise.all([
             prisma.team.count({ where: { eventId: e.id } }).catch(() => 0),
             prisma.judge.count({ where: { eventId: e.id } }).catch(() => 0),
             prisma.scoreSubmission.count({ where: { eventId: e.id } }).catch(() => 0),
             prisma.assignment.count({ where: { eventId: e.id } }).catch(() => 0),
           ]);
-          return { eventId: e.id, counts };
+          
+          let totalAssignments = assignmentsCount;
+          if (assignmentsCount === 0 && judgesCount > 0 && teamsCount > 0) {
+            const [judges, teams] = await Promise.all([
+              prisma.judge.findMany({ where: { eventId: e.id }, include: { judgeTracks: true } }),
+              prisma.team.findMany({ where: { eventId: e.id }, select: { trackId: true } }),
+            ]);
+            
+            let sum = 0;
+            for (const j of judges) {
+              const judgeTrackIds = j.judgeTracks.map((jt: any) => jt.trackId);
+              const targetTeams = teams.filter((t: any) => {
+                if (judgeTrackIds.length === 0) return true;
+                return t.trackId === null || judgeTrackIds.includes(t.trackId);
+              });
+              sum += targetTeams.length;
+            }
+            totalAssignments = sum;
+          }
+          
+          return { eventId: e.id, counts: [teamsCount, judgesCount, submissionsCount, totalAssignments] };
         } catch (err) {
           console.warn(`Failed to fetch counts for event ${e.id}:`, err);
           return { eventId: e.id, counts: [0, 0, 0, 0] };

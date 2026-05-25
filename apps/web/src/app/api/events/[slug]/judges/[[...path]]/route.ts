@@ -11,16 +11,33 @@ export const dynamic = 'force-dynamic';
 async function handleList(req: NextRequest, slug: string) {
   try {
     const { eventId } = await requireEventOwner(req, slug);
-    const judges = await prisma.judge.findMany({
-      where: { eventId },
-      include: { judgeTracks: { include: { track: true } }, scoreSubmissions: true, assignments: true },
-    });
-    return success(judges.map((j: any) => ({
-      id: j.id, name: j.name, email: j.email,
-      tracks: j.judgeTracks.map((jt: any) => jt.track.name),
-      hasPin: !!j.passwordHash,
-      completion: j.assignments.length > 0 ? Math.round((j.scoreSubmissions.length / j.assignments.length) * 100) : 0,
-    })));
+    const [judges, allTeams] = await Promise.all([
+      prisma.judge.findMany({
+        where: { eventId },
+        include: { judgeTracks: { include: { track: true } }, scoreSubmissions: true, assignments: true },
+      }),
+      prisma.team.findMany({
+        where: { eventId },
+        select: { id: true, trackId: true },
+      }),
+    ]);
+    return success(judges.map((j: any) => {
+      let denominator = j.assignments.length;
+      if (denominator === 0) {
+        const judgeTrackIds = j.judgeTracks.map((jt: any) => jt.trackId);
+        const targetTeams = allTeams.filter((t: any) => {
+          if (judgeTrackIds.length === 0) return true;
+          return t.trackId === null || judgeTrackIds.includes(t.trackId);
+        });
+        denominator = targetTeams.length;
+      }
+      return {
+        id: j.id, name: j.name, email: j.email,
+        tracks: j.judgeTracks.map((jt: any) => jt.track.name),
+        hasPin: !!j.passwordHash,
+        completion: denominator > 0 ? Math.round((j.scoreSubmissions.length / denominator) * 100) : 0,
+      };
+    }));
   } catch (err: any) {
     if (err instanceof AuthError) {
       throw err;
