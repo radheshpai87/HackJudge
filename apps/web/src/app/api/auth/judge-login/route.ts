@@ -24,16 +24,63 @@ export async function POST(req: NextRequest) {
     });
     if (!event) return apiError("EVENT_NOT_FOUND", "Event not found", null, 404);
 
-    const judge = await prisma.judge.findFirst({
-      where: { email: parse.data.email, eventId: event.id },
+    const emailNormalized = parse.data.email.toLowerCase().trim();
+
+    // Check if there is an organizer with this email who owns this event
+    const organizer = await prisma.user.findFirst({
+      where: { email: emailNormalized, role: "organizer" },
     });
-    if (!judge) return apiError("UNAUTHORIZED", "Email not registered for this event", null, 401);
-    if (!judge.passwordHash) {
-      return apiError("NO_PIN", "No PIN set. Ask your organizer to set one.", null, 401);
+
+    let judge = await prisma.judge.findFirst({
+      where: { email: emailNormalized, eventId: event.id },
+    });
+
+    let authenticated = false;
+    let isOrganizerFlow = false;
+
+    // Organizer credential check
+    if (organizer && organizer.passwordHash) {
+      if (!event.userId || event.userId === organizer.id) {
+        const valid = await bcrypt.compare(parse.data.pin, organizer.passwordHash);
+        if (valid) {
+          authenticated = true;
+          isOrganizerFlow = true;
+        }
+      }
     }
 
-    const valid = await bcrypt.compare(parse.data.pin, judge.passwordHash);
-    if (!valid) return apiError("UNAUTHORIZED", "Incorrect PIN", null, 401);
+    // Standard judge check if organizer flow didn't authenticate
+    if (!authenticated && judge && judge.passwordHash) {
+      const valid = await bcrypt.compare(parse.data.pin, judge.passwordHash);
+      if (valid) {
+        authenticated = true;
+      }
+    }
+
+    if (!authenticated) {
+      if (judge) {
+        return apiError("UNAUTHORIZED", "Incorrect PIN", null, 401);
+      }
+      return apiError("UNAUTHORIZED", "Email not registered for this event", null, 401);
+    }
+
+    // If organizer authenticated successfully, ensure they have a judge record in this event
+    if (isOrganizerFlow && organizer) {
+      if (!judge) {
+        judge = await prisma.judge.create({
+          data: {
+            eventId: event.id,
+            name: organizer.name,
+            email: organizer.email,
+            passwordHash: organizer.passwordHash,
+          },
+        });
+      }
+    }
+
+    if (!judge) {
+      return apiError("UNAUTHORIZED", "Failed to resolve judge profile", null, 401);
+    }
 
     await prisma.judge.update({
       where: { id: judge.id },
@@ -51,7 +98,7 @@ export async function POST(req: NextRequest) {
       role: "judge",
     });
 
-    await auditLog(event.id, judge.id, "judge", "judge_pin_login", { email: judge.email });
+    await auditLog(event.id, judge.id, "judge", "judge_pin_login", { email: judge.email, isOrganizer: isOrganizerFlow });
 
     return success({ accessToken, refreshToken, eventSlug: event.slug });
   } catch (e: any) {
