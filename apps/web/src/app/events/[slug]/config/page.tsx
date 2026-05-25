@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Save, Check, Plus, Trash2, AlertTriangle, Users, Tag, ListChecks, ClipboardList } from 'lucide-react';
+import { ArrowLeft, Save, Check, Plus, Trash2, AlertTriangle, Users, Tag, ListChecks, ClipboardList, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import Loader from '@/components/Loader';
 
@@ -35,6 +35,11 @@ export default function ConfigPage() {
   const [errStruct, setErrStruct] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
 
+  const [tableNumbers, setTableNumbers] = useState<Record<string, string>>({});
+  const [savingTables, setSavingTables] = useState(false);
+  const [savedTables, setSavedTables] = useState(false);
+  const [errTables, setErrTables] = useState('');
+
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteConfirmSlug, setDeleteConfirmSlug] = useState('');
   const [deletingEvent, setDeletingEvent] = useState(false);
@@ -49,7 +54,11 @@ export default function ConfigPage() {
         setBasic({ name: ev.name ?? '', description: ev.description ?? '', timezone: ev.timezone ?? '' });
         setTracks((d.data.tracks ?? []).map((t: any) => ({ id: t.id ?? uid(), name: t.name ?? '', description: t.description ?? '' })));
         setCriteria((d.data.criteria ?? []).map((c: any) => ({ id: c.id ?? uid(), name: c.name ?? '', weight: c.weight ?? 0.5, max_score: c.max_score ?? 10, track_id: c.track_id ?? null, scoring_type: c.scoring_type ?? 'numeric' })));
-        setTeams((d.data.teams ?? []).map((t: any) => ({ id: t.id ?? uid(), name: t.name ?? '', track_id: t.track_id ?? null, table_number: t.table_number ?? '' })));
+        const loadedTeams = (d.data.teams ?? []).map((t: any) => ({ id: t.id ?? uid(), name: t.name ?? '', track_id: t.track_id ?? null, table_number: t.table_number ?? '' }));
+        setTeams(loadedTeams);
+        const tn: Record<string, string> = {};
+        for (const t of loadedTeams) tn[t.id] = t.table_number;
+        setTableNumbers(tn);
         setJudges((d.data.judges ?? []).map((j: any) => ({ id: j.id ?? uid(), name: j.name ?? '', email: j.email ?? '', tracks: j.tracks ?? [] })));
         setLoading(false);
       });
@@ -73,6 +82,31 @@ export default function ConfigPage() {
       window.location.href = `/login?next=/events/${slug}/config`;
     }
     else setErrBasic(data.error?.message ?? 'Failed to save');
+  }
+
+  async function saveTableNumbers() {
+    setSavingTables(true); setErrTables(''); setSavedTables(false);
+    const token = getToken();
+    if (!token) { setNotOrg(true); setSavingTables(false); return; }
+    const payload = teams.map(t => ({ id: t.id, tableNumber: tableNumbers[t.id] ?? '' }));
+    const res = await fetch(`${API}/events/${slug}/teams/bulk-update`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ teams: payload }),
+    });
+    const data = await res.json();
+    setSavingTables(false);
+    if (data.success) {
+      setSavedTables(true);
+      setTeams(ts => ts.map(t => ({ ...t, table_number: tableNumbers[t.id] ?? t.table_number })));
+      setTimeout(() => setSavedTables(false), 2500);
+    }
+    else if (res.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      window.location.href = `/login?next=/events/${slug}/config`;
+    }
+    else setErrTables(data.error?.message ?? 'Failed to save table numbers');
   }
 
   async function saveStructure() {
@@ -184,6 +218,37 @@ export default function ConfigPage() {
             </button>
           </div>
         </div>
+
+        {/* ── Quick Table Numbers ── */}
+        {teams.length > 0 && (
+          <div className="card mb-6 p-6">
+            <h2 className="mb-1 flex items-center gap-2 text-base font-semibold text-fg-default">
+              <MapPin size={15} className="text-fg-subtle" /> Quick Update Table Numbers
+            </h2>
+            <p className="mb-5 text-xs text-fg-muted leading-relaxed">
+              Update table numbers without resetting scores or judge sessions. Safe to use during a live event.
+            </p>
+            <div className="space-y-2">
+              {teams.map((t) => (
+                <div key={t.id} className="flex items-center gap-3">
+                  <span className="flex-1 truncate text-sm text-fg-default">{t.name}</span>
+                  <input
+                    className="input w-28 text-center font-mono text-sm"
+                    placeholder="Table #"
+                    value={tableNumbers[t.id] ?? ''}
+                    onChange={(e) => setTableNumbers(tn => ({ ...tn, [t.id]: e.target.value }))}
+                  />
+                </div>
+              ))}
+            </div>
+            {errTables && <p className="mt-3 text-sm text-semantic-error">{errTables}</p>}
+            <div className="mt-5">
+              <button type="button" onClick={saveTableNumbers} disabled={savingTables} className="btn-primary">
+                {savedTables ? <><Check size={14} /> Saved</> : savingTables ? 'Saving…' : <><Save size={14} /> Save Table Numbers</>}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ── Structural Config ── */}
         <div className="mb-3 flex items-start gap-2.5 rounded-lg border border-semantic-warning/30 bg-semantic-warning/5 px-4 py-3 text-sm text-semantic-warning">

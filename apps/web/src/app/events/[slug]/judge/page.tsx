@@ -380,11 +380,11 @@ function ScoringScreen({ token, slug, team, eventConfig, onSubmitted, onBack }: 
     const saveData = await apiFetch(`/events/${slug}/scores`, token, { method: 'PUT', body: JSON.stringify({ teamId: team.id, scores: entries }) });
     if (!saveData.success) { setSubmitting(false); setErr(saveData.error?.message ?? 'Failed to save scores'); return; }
     const submitData = await apiFetch(`/events/${slug}/scores/submit`, token, { method: 'POST', body: JSON.stringify({ teamId: team.id, notes: notes.trim() || undefined }) });
-    setSubmitting(false);
     if (submitData.success) {
       const meData = await apiFetch(`/events/${slug}/judges/me`, token);
       onSubmitted(meData.success ? meData.data.progress : { completed: 0, totalAssigned: 0 });
     } else {
+      setSubmitting(false);
       setErr(submitData.error?.message ?? 'Failed to submit');
     }
   }

@@ -35,60 +35,72 @@ export interface ResultSnapshot {
 }
 
 export async function computeResults(eventId: string): Promise<ResultSnapshot> {
-  const [scores, submissions] = await Promise.all([
-    prisma.score.findMany({
-      where: { team: { eventId } },
-      include: { criterion: true, team: true, judge: true },
-    }),
-    prisma.scoreSubmission.findMany({
-      where: { eventId },
-      include: { judge: true },
-    }),
+  // Fetch all data upfront in parallel to avoid N+1 queries
+  const [scores, submissions, teams, criteria, judges, event, tracks] = await Promise.all([
+    prisma.score.findMany({ where: { eventId } }),
+    prisma.scoreSubmission.findMany({ where: { eventId } }),
+    prisma.team.findMany({ where: { eventId } }),
+    prisma.criterion.findMany({ where: { eventId } }),
+    prisma.judge.findMany({ where: { eventId } }),
+    prisma.event.findUnique({ where: { id: eventId } }),
+    prisma.track.findMany({ where: { eventId } }),
   ]);
 
-  const config = (await prisma.event.findUnique({ where: { id: eventId } }))!.configJson as any;
+  if (!event) throw new Error("Event not found");
+
+  const config = event.configJson as any;
   const tiebreaker = config.results?.tiebreaker ?? "higher_avg";
   const outlierThreshold = config.moderation?.outlier_threshold ?? 1.5;
 
-  const teamScores = new Map<string, typeof scores>();
+  // Build lookup maps for O(1) access instead of DB joins
+  const trackMap = new Map<string, any>(tracks.map((t: any) => [t.id, t]));
+  const criterionMap = new Map<string, any>(criteria.map((c: any) => [c.id, c]));
+  const judgeMap = new Map<string, any>(judges.map((j: any) => [j.id, j]));
+
+  // Group scores by team
+  const teamScoresMap = new Map<string, any[]>();
   for (const s of scores) {
-    const arr = teamScores.get(s.teamId) ?? [];
+    const arr = teamScoresMap.get(s.teamId) ?? [];
     arr.push(s);
-    teamScores.set(s.teamId, arr);
+    teamScoresMap.set(s.teamId, arr);
   }
 
-  const teamSubmissions = new Map<string, any[]>();
+  // Group submissions by team
+  const teamSubmissionsMap = new Map<string, any[]>();
   for (const sub of submissions) {
-    const arr = teamSubmissions.get(sub.teamId) ?? [];
+    const arr = teamSubmissionsMap.get(sub.teamId) ?? [];
     arr.push(sub);
-    teamSubmissions.set(sub.teamId, arr);
+    teamSubmissionsMap.set(sub.teamId, arr);
   }
 
   const teamResults: ComputedTeamResult[] = [];
-  const teams = await prisma.team.findMany({ where: { eventId }, include: { track: true } });
 
   for (const team of teams) {
-    const teamScoreList = teamScores.get(team.id) ?? [];
-    const judges = new Set(teamScoreList.map((s: any) => s.judgeId));
-    const judgeCount = judges.size;
+    const trackInfo = team.trackId ? trackMap.get(team.trackId) : null;
+    const teamScoreList = teamScoresMap.get(team.id) ?? [];
+    const uniqueJudgeIds = new Set(teamScoreList.map((s: any) => s.judgeId));
+    const judgeCount = uniqueJudgeIds.size;
 
     if (judgeCount === 0) {
       teamResults.push({
         teamId: team.id, teamName: team.name, trackId: team.trackId,
-        trackName: team.track?.name ?? null, score: null, judgeCount: 0,
+        trackName: trackInfo?.name ?? null, score: null, judgeCount: 0,
         criteriaBreakdown: [], outlierFlags: [],
         finishedJudges: [], allJudges: [],
       });
       continue;
     }
 
-    const byCriterion = new Map<string, typeof scores>();
+    // Group scores by criterion
+    const byCriterion = new Map<string, any[]>();
     for (const s of teamScoreList) {
       const arr = byCriterion.get(s.criterionId) ?? [];
       arr.push(s);
       byCriterion.set(s.criterionId, arr);
     }
-    const byJudge = new Map<string, typeof teamScoreList>();
+
+    // Group scores by judge for weighted total
+    const byJudge = new Map<string, any[]>();
     for (const s of teamScoreList) {
       const arr = byJudge.get(s.judgeId) ?? [];
       arr.push(s);
@@ -98,8 +110,10 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
     let totalScoreSum = 0;
     byJudge.forEach((judgeScores) => {
       const judgeTotal = judgeScores.reduce((sum: number, s: any) => {
-        const weight = Number(s.criterion.weight);
-        const maxScore = Number(s.criterion.maxScore);
+        const crit = criterionMap.get(s.criterionId);
+        if (!crit) return sum;
+        const weight = Number(crit.weight);
+        const maxScore = Number(crit.maxScore);
         const valOutOf100 = maxScore > 0 ? (Number(s.value) / maxScore) * 100 : 0;
         return sum + valOutOf100 * weight;
       }, 0);
@@ -111,7 +125,8 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
     const outlierFlags: ComputedTeamResult["outlierFlags"] = [];
 
     byCriterion.forEach((critScores, criterionId) => {
-      const criterion = critScores[0].criterion;
+      const criterion = criterionMap.get(criterionId);
+      if (!criterion) return;
       const maxScore = criterion.maxScore;
       const weight = Number(criterion.weight);
       const avgScore = critScores.reduce((sum: number, s: any) => sum + Number(s.value), 0) / critScores.length;
@@ -127,24 +142,28 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
         for (const s of critScores) {
           const deviation = Math.abs(Number(s.value) - mean) / stdDev;
           if (deviation > outlierThreshold) {
-            outlierFlags.push({ judgeId: s.judgeId, judgeName: s.judge.name, criterionId, deviation: Math.round(deviation * 100) / 100 });
+            const judge = judgeMap.get(s.judgeId);
+            outlierFlags.push({ judgeId: s.judgeId, judgeName: judge?.name ?? "Unknown", criterionId, deviation: Math.round(deviation * 100) / 100 });
           }
         }
       }
     });
 
-    const allJudgesMap = new Map<string, string>();
-    for (const s of teamScoreList) {
-      if (s.judge) allJudgesMap.set(s.judge.id, s.judge.name);
-    }
-    const allJudges = Array.from(allJudgesMap.entries()).map(([id, name]) => ({ id, name }));
+    // Build judge lists from map lookups
+    const allJudges = Array.from(uniqueJudgeIds).map(id => {
+      const judge = judgeMap.get(id);
+      return { id, name: judge?.name ?? "Unknown" };
+    });
 
-    const subList = teamSubmissions.get(team.id) ?? [];
-    const finishedJudges = subList.map((sub: any) => ({ id: sub.judgeId, name: sub.judge?.name ?? "Unknown Judge" }));
+    const subList = teamSubmissionsMap.get(team.id) ?? [];
+    const finishedJudges = subList.map((sub: any) => {
+      const judge = judgeMap.get(sub.judgeId);
+      return { id: sub.judgeId, name: judge?.name ?? "Unknown Judge" };
+    });
 
     teamResults.push({
       teamId: team.id, teamName: team.name, trackId: team.trackId,
-      trackName: team.track?.name ?? null,
+      trackName: trackInfo?.name ?? null,
       score: Math.round(totalScore * 100) / 100, judgeCount,
       criteriaBreakdown, outlierFlags,
       finishedJudges, allJudges,
@@ -152,7 +171,6 @@ export async function computeResults(eventId: string): Promise<ResultSnapshot> {
   }
 
   const trackRankings: Record<string, ComputedTeamResult[]> = {};
-  const tracks = await prisma.track.findMany({ where: { eventId } });
   const trackIds = [...tracks.map((t: any) => t.id), "null"];
 
   for (const tid of trackIds) {
