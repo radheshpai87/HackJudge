@@ -223,21 +223,37 @@ function JudgeCard({ judge, slug, portalUrl, onPinUpdated }: { judge: any; slug:
     if (pin.length < 4) { setErr('Min 4 characters'); return; }
     setSaving(true); setErr('');
     const orgToken = localStorage.getItem('token') || '';
-    const res = await fetch(`${API}/events/${slug}/judges/${judge.id}/pin`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${orgToken}` },
-      body: JSON.stringify({ pin }),
-    });
-    if (res.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      window.location.href = `/login?next=/events/${slug}`;
-      return;
+    try {
+      const res = await fetch(`${API}/events/${slug}/judges/${judge.id}/pin`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${orgToken}` },
+        body: JSON.stringify({ pin }),
+      });
+      if (res.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        window.location.href = `/login?next=/events/${slug}`;
+        return;
+      }
+      if (!res.ok) {
+        setErr('Sorry, please try again.');
+        setSaving(false);
+        return;
+      }
+      const data = await res.json();
+      setSaving(false);
+      if (data.success) {
+        setSaved(true);
+        setPin('');
+        onPinUpdated();
+        setTimeout(() => setSaved(false), 2000);
+      } else {
+        setErr('Sorry, please try again.');
+      }
+    } catch {
+      setSaving(false);
+      setErr('Sorry, please try again.');
     }
-    const data = await res.json();
-    setSaving(false);
-    if (data.success) { setSaved(true); setPin(''); onPinUpdated(); setTimeout(() => setSaved(false), 2000); }
-    else setErr(data.error?.message ?? 'Failed to save');
   }
 
   return (

@@ -81,7 +81,7 @@ export async function PUT(req: NextRequest, { params }: { params: { slug: string
   const path = req.nextUrl.pathname.replace(`/api/events/${params.slug}/judges`, "").replace(/\/$/, "");
   try {
     const m = path.match(/^\/([^/]+)\/pin$/);
-    if (m) return handleSetPin(req, params.slug, m[1]);
+    if (m) return await handleSetPin(req, params.slug, m[1]);
     return apiError("NOT_FOUND", "Route not found", null, 404);
   } catch (e: any) {
     if (e instanceof AuthError) return apiError(e.code, e.message, null, e.status);
@@ -94,7 +94,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { slug: str
   const path = req.nextUrl.pathname.replace(`/api/events/${params.slug}/judges`, "").replace(/\/$/, "");
   try {
     const m = path.match(/^\/([^/]+)\/pin$/);
-    if (m) return handleClearPin(req, params.slug, m[1]);
+    if (m) return await handleClearPin(req, params.slug, m[1]);
     return apiError("NOT_FOUND", "Route not found", null, 404);
   } catch (e: any) {
     if (e instanceof AuthError) return apiError(e.code, e.message, null, e.status);

@@ -255,7 +255,8 @@ class CollectionProxy {
         $set[k] = v;
       }
     }
-    const doc = await this.col.findOneAndUpdate(filter, { $set }, { returnDocument: "after" });
+    const result = await this.col.findOneAndUpdate(filter, { $set }, { returnDocument: "after" });
+    const doc = result && typeof result === "object" && "value" in result ? result.value : result;
     return mapDoc(doc);
   }
 
@@ -269,7 +270,8 @@ class CollectionProxy {
 
   async delete(args: { where: Record<string, any> }): Promise<any> {
     const filter = await buildWhere(args.where);
-    const doc = await this.col.findOneAndDelete(filter);
+    const result = await this.col.findOneAndDelete(filter);
+    const doc = result && typeof result === "object" && "value" in result ? result.value : result;
     return mapDoc(doc);
   }
 
